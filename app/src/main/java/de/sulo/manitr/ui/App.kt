@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.DropdownMenu
@@ -53,12 +56,31 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class Tab(val label: String, val glyph: String, val title: String, val fab: String?) {
-    HOME("Übersicht", "▦", "Sülo ManiTR", null),
-    FX("Devisen", "€", "Devisen", "Devise hinzufügen"),
-    GOLD("Gold", "●", "Gold", "Gold hinzufügen"),
-    BONDS("Bonds", "≣", "Eurobonds Türkei", "Eurobond hinzufügen"),
-    MISC("Misc.", "◆", "Sonstige Vermögenswerte", "Vermögenswert hinzufügen"),
+private enum class Tab(val label: String, val icon: ImageVector, val title: String, val fab: String?) {
+    HOME("Übersicht", NavIcons.Overview, "Sülo ManiTR", null),
+    FX("Devisen", NavIcons.Euro, "Devisen", "Devise hinzufügen"),
+    GOLD("Gold", NavIcons.GoldBars, "Gold", "Gold hinzufügen"),
+    BONDS("Bonds", NavIcons.Bonds, "Eurobonds Türkei", "Eurobond hinzufügen"),
+    MISC("Misc.", NavIcons.Misc, "Sonstige Vermögenswerte", "Vermögenswert hinzufügen"),
+}
+
+/** Untere Leiste mit doppelt so großen Icons (36 dp) */
+@Composable
+private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    Row(Modifier.fillMaxWidth().background(Color(0xFFEEF2F8)).navigationBarsPadding().padding(vertical = 8.dp)) {
+        Tab.values().forEach { t ->
+            val sel = t == selected
+            Column(Modifier.weight(1f).clickable { onSelect(t) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(width = 68.dp, height = 44.dp).clip(RoundedCornerShape(22.dp)).background(if (sel) C.PriC else Color.Transparent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(t.icon, contentDescription = t.label, modifier = Modifier.size(36.dp), tint = if (sel) C.Navy else C.Mute)
+                }
+                Text(t.label, fontSize = 11.sp, color = if (sel) C.Navy else C.Mute, fontWeight = if (sel) FontWeight.Medium else FontWeight.Normal)
+            }
+        }
+    }
 }
 
 private data class DialogReq(val tab: String, val id: Long?)
@@ -122,17 +144,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
                 }
             }
         },
-        bottomBar = {
-            NavigationBar(containerColor = Color(0xFFEEF2F8)) {
-                Tab.values().forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t, onClick = { tab = t },
-                        icon = { Text(t.glyph, fontSize = 18.sp) },
-                        label = { Text(t.label, fontSize = 11.sp) },
-                    )
-                }
-            }
-        },
+        bottomBar = { BottomBar(tab) { tab = it } },
         floatingActionButton = {
             tab.fab?.let { label ->
                 ExtendedFloatingActionButton(
@@ -151,7 +163,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
                 Tab.FX -> FxScreen(vm) { openDialog(Tab.FX, it) }
                 Tab.GOLD -> GoldScreen(vm) { openDialog(Tab.GOLD, it) }
                 Tab.BONDS -> BondsScreen(vm) { openDialog(Tab.BONDS, it) }
-                Tab.MISC -> MiscScreen(vm) { openDialog(Tab.MISC, it) }
+                Tab.MISC -> MiscScreen(vm, { openDialog(Tab.MISC, it) }, { dialogTab = "RENT"; dialogId = it })
             }
         }
     }
@@ -163,6 +175,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
         Tab.GOLD.name -> GoldDialog(vm, dialogId, close)
         Tab.BONDS.name -> BondDialog(vm, dialogId, close)
         Tab.MISC.name -> MiscDialog(vm, dialogId, close)
+        "RENT" -> RentDialog(vm, dialogId, close)
     }
     if (pwExport) {
         PasswordDialog(

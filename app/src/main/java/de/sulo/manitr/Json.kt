@@ -29,6 +29,7 @@ object Json {
             JSONObject().put("id", it.id).put("name", it.name).put("category", it.category)
                 .put("currency", it.currency).put("amount", it.amount)
         }))
+        put("rents", JSONArray(p.rents.map { JSONObject().put("id", it.id).put("property", it.property).put("rent", it.rentTry) }))
     }
 
     fun portfolioFromJson(o: JSONObject): Portfolio {
@@ -47,6 +48,7 @@ object Json {
             misc = o.optJSONArray("misc").mapObjects {
                 MiscHolding(it.getLong("id"), it.getString("name"), it.getString("category"), it.getString("currency"), it.getDouble("amount"))
             },
+            rents = o.optJSONArray("rents").mapObjects { RentHolding(it.getLong("id"), it.getString("property"), it.getDouble("rent")) },
             nextId = o.optLong("nextId", 1),
         )
     }

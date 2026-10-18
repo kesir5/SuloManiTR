@@ -30,12 +30,16 @@ data class MiscHolding(
     val amount: Double,
 )
 
+/** Vermietete Immobilie: Miete pro Monat in türkischen Lira */
+data class RentHolding(val id: Long, val property: String, val rentTry: Double)
+
 data class Portfolio(
     val fx: List<FxHolding> = emptyList(),
     val gold: List<GoldHolding> = emptyList(),
     val bondInfos: List<BondInfo> = Presets.bonds,
     val bonds: List<BondHolding> = emptyList(),
     val misc: List<MiscHolding> = emptyList(),
+    val rents: List<RentHolding> = emptyList(),
     val nextId: Long = 1,
 ) {
     fun info(isin: String): BondInfo? = bondInfos.firstOrNull { it.isin == isin }

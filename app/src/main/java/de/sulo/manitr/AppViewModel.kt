@@ -104,6 +104,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         events.tryEmit(Event("${item.name} entfernt") { update { p -> p.copy(misc = p.misc + item) } })
     }
 
+    // ---------- Mieten ----------
+    fun saveRent(id: Long?, property: String, rentTry: Double) = update { p ->
+        if (id == null) p.copy(rents = p.rents + RentHolding(p.nextId, property, rentTry), nextId = p.nextId + 1)
+        else p.copy(rents = p.rents.map { if (it.id == id) it.copy(property = property, rentTry = rentTry) else it })
+    }
+
+    fun removeRent(id: Long) {
+        val item = portfolio.rents.firstOrNull { it.id == id } ?: return
+        update { p -> p.copy(rents = p.rents.filterNot { it.id == id }) }
+        events.tryEmit(Event("${item.property} entfernt") { update { p -> p.copy(rents = p.rents + item) } })
+    }
+
     // ---------- Kurse ----------
     fun refresh() {
         if (refreshing) return

@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -48,6 +51,7 @@ private fun HoldingTable(
     footer: String,
     onEdit: (Long) -> Unit,
     onDelete: (Long) -> Unit,
+    extra: @Composable ColumnScope.() -> Unit = {},
 ) {
     val sum = rows.sumOf { it.usd }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 10.dp).padding(bottom = 88.dp)) {
@@ -104,6 +108,7 @@ private fun HoldingTable(
             }
             Muted(footer, Modifier.padding(top = 4.dp), 9)
         }
+        extra()
     }
 }
 
@@ -135,7 +140,7 @@ fun GoldScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
 }
 
 @Composable
-fun MiscScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
+fun MiscScreen(vm: AppViewModel, onEdit: (Long) -> Unit, onRent: (Long?) -> Unit) {
     val rates = vm.rates
     val rows = vm.portfolio.misc.map {
         TRow(it.id, it.name, it.category, "${fmt(it.amount, 0)} ${it.currency}", rates.toUsd(it.currency, it.amount), it.currency)
@@ -144,5 +149,9 @@ fun MiscScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
         "Meine sonstigen Vermögenswerte", Grp.MISC, rows, rates, "Noch keine Einträge.\nTippe auf „Vermögenswert hinzufügen“.",
         "Wert in beliebiger Währung eingeben · Umrechnung live · Zeile antippen zum Ändern",
         onEdit, vm::removeMisc,
+        extra = {
+            Spacer(Modifier.height(28.dp))
+            RentSection(vm, onRent)
+        },
     )
 }

@@ -103,7 +103,8 @@ class CoreTest {
             fx = listOf(FxHolding(1, "TRY", 850_000.0)), gold = listOf(GoldHolding(2, "ata", 3.0)),
             bonds = listOf(BondHolding(3, cq19.isin, 458_000.0)),
             bondInfos = Presets.bonds + BondInfo("ZZ", "Test", "EUR", 4.0, 1, LocalDate.of(2030, 1, 1), 95.5),
-            misc = listOf(MiscHolding(4, "Wohnung", "Immobilie", "TRY", 5_200_000.0)), nextId = 9,
+            misc = listOf(MiscHolding(4, "Wohnung", "Immobilie", "TRY", 5_200_000.0)),
+            rents = listOf(RentHolding(7, "Wohnung Kadıköy", 45_000.0), RentHolding(8, "Laden İzmir", 60_000.0)), nextId = 9,
         )
         val m = Market(
             usdPer = mapOf("USD" to 1.0, "EUR" to 1.12), goldUsdPerOz = 4000.0, updatedAt = 123L,

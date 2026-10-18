@@ -112,6 +112,33 @@ fun MiscDialog(vm: AppViewModel, id: Long?, onDismiss: () -> Unit) {
 }
 
 @Composable
+fun RentDialog(vm: AppViewModel, id: Long?, onDismiss: () -> Unit) {
+    val item = vm.portfolio.rents.firstOrNull { it.id == id }
+    var name by remember { mutableStateOf(item?.property ?: "") }
+    var rent by remember { mutableStateOf(item?.rentTry?.let { plain(it) } ?: "") }
+    val value = parseInput(rent)
+    val rates = vm.rates
+    FormDialog(
+        title = if (item == null) "Property hinzufügen" else "Property ändern",
+        confirmText = if (item == null) "Hinzufügen" else "Speichern",
+        confirmEnabled = name.isNotBlank() && value != null && value > 0,
+        onDismiss = onDismiss,
+        onConfirm = { vm.saveRent(item?.id, name.trim(), value!!); onDismiss() },
+        onDelete = item?.let { { vm.removeRent(it.id); onDismiss() } },
+    ) {
+        TextInput("Property", name, { name = it }, placeholder = "z. B. Wohnung Izmir")
+        NumberField("Miete pro Monat", rent, { rent = it }, suffix = "TL")
+        if (value != null && value > 0) {
+            val usd = rates.toUsd("TRY", value)
+            InfoBox(
+                "Pro Monat: ${fmt(rates.toEur(usd))} € · ${fmt(usd)} $\n" +
+                    "Pro Jahr: ${fmt(rates.toEur(usd) * 12)} € · ${fmt(usd * 12)} $ (Live-Kurs)"
+            )
+        }
+    }
+}
+
+@Composable
 fun BondDialog(vm: AppViewModel, id: Long?, onDismiss: () -> Unit) {
     val holding = vm.portfolio.bonds.firstOrNull { it.id == id }
     val existing = holding?.let { vm.portfolio.info(it.isin) }
