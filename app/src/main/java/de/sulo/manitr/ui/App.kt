@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -87,7 +91,10 @@ private data class DialogReq(val tab: String, val id: Long?)
 
 @Composable
 fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    val tabs = Tab.values()
+    val pager = rememberPagerState(initialPage = 0) { tabs.size }
+    val scope = rememberCoroutineScope()
+    val tab = tabs[pager.currentPage]
     var dialogTab by rememberSaveable { mutableStateOf<String?>(null) }
     var dialogId by rememberSaveable { mutableStateOf<Long?>(null) }
     var menu by remember { mutableStateOf(false) }
@@ -144,7 +151,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
                 }
             }
         },
-        bottomBar = { BottomBar(tab) { tab = it } },
+        bottomBar = { BottomBar(tab) { t -> scope.launch { pager.animateScrollToPage(t.ordinal) } } },
         floatingActionButton = {
             tab.fab?.let { label ->
                 ExtendedFloatingActionButton(
@@ -158,12 +165,14 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            when (tab) {
-                Tab.HOME -> OverviewScreen(vm)
-                Tab.FX -> FxScreen(vm) { openDialog(Tab.FX, it) }
-                Tab.GOLD -> GoldScreen(vm) { openDialog(Tab.GOLD, it) }
-                Tab.BONDS -> BondsScreen(vm) { openDialog(Tab.BONDS, it) }
-                Tab.MISC -> MiscScreen(vm, { openDialog(Tab.MISC, it) }, { dialogTab = "RENT"; dialogId = it })
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+                when (tabs[page]) {
+                    Tab.HOME -> OverviewScreen(vm)
+                    Tab.FX -> FxScreen(vm) { openDialog(Tab.FX, it) }
+                    Tab.GOLD -> GoldScreen(vm) { openDialog(Tab.GOLD, it) }
+                    Tab.BONDS -> BondsScreen(vm) { openDialog(Tab.BONDS, it) }
+                    Tab.MISC -> MiscScreen(vm, { openDialog(Tab.MISC, it) }, { dialogTab = "RENT"; dialogId = it })
+                }
             }
         }
     }

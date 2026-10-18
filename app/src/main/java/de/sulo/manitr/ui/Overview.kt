@@ -183,8 +183,8 @@ fun OverviewScreen(vm: AppViewModel) {
         ) {
             Text("GESAMT", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Column(horizontalAlignment = Alignment.End) {
-                Text(money(totals.total, "USD", rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 18.sp)
-                Text(money(totals.total, "EUR", rates), color = Color(0xFFB7C8E2), fontSize = 11.sp)
+                Text(money(totals.total, "USD", rates), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 19.sp)
+                Text(money(totals.total, "EUR", rates), color = Color(0xFFB7C8E2), fontSize = 15.sp, lineHeight = 18.sp)
             }
         }
         if (vm.errors.isNotEmpty()) {
@@ -211,8 +211,8 @@ private fun Kpi(g: Grp, usd: Double, total: Double, rates: Rates, ccy: String, m
                     Text(pct(usd, total), color = g.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(3.dp))
-                Text(money(usd, ccy, rates), fontSize = 14.sp, fontWeight = FontWeight.Bold, lineHeight = 17.sp)
-                Text(money(usd, alt, rates), fontSize = 11.sp, color = Color(0xFF444444), lineHeight = 13.sp)
+                Text(money(usd, ccy, rates), fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
+                Text(money(usd, alt, rates), fontSize = 14.sp, color = Color(0xFF444444), lineHeight = 16.sp)
             }
         }
     }
@@ -240,8 +240,8 @@ private fun PositionGroup(g: Grp, rows: List<PosRow>, sumUsd: Double, rates: Rat
                 Muted("${rows.size} Position${if (rows.size == 1) "" else "en"}", size = 9)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(money(sumUsd, "USD", rates), fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
-                Muted(money(sumUsd, "EUR", rates), size = 9)
+                Text(money(sumUsd, "USD", rates), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 15.sp)
+                Text(money(sumUsd, "EUR", rates), color = C.Mute, fontSize = 12.sp, lineHeight = 14.sp)
             }
             Text(if (open) "▾" else "▸", color = g.color, fontSize = 12.sp)
         }

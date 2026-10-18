@@ -30,9 +30,9 @@ import de.sulo.manitr.AppViewModel
 import de.sulo.manitr.Rates
 import de.sulo.manitr.fmt
 
-private val TL = 68.dp
-private val EU = 56.dp
-private val US = 56.dp
+private val TL = 64.dp
+private val EU = 64.dp
+private val US = 64.dp
 private val DEL = 34.dp
 
 /** Abschnitt „Mieten“ auf dem Misc-Bildschirm: Miete in TL, umgerechnet in EUR und USD. */
@@ -96,8 +96,8 @@ private fun SumRow(label: String, tl: Double, rates: Rates, bg: Color, fg: Color
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(bg).padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = fg, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
         Text(fmt(tl), Modifier.width(TL), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text(fmt(rates.toEur(usd)), Modifier.width(EU), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text(fmt(usd), Modifier.width(US), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text("${fmt(rates.toEur(usd))} €", Modifier.width(EU), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+        Text("${fmt(usd)} $", Modifier.width(US), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
         Box(Modifier.width(DEL))
     }
 }

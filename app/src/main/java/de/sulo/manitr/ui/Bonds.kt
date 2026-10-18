@@ -56,7 +56,7 @@ private enum class BondSort(val label: String) {
 }
 
 private val PERIODS = listOf("1M" to 30, "3M" to 90, "1J" to 365)
-private val COL = 72.dp   // Breite der USD-/EUR-Spalten
+private val COL = 78.dp   // Breite der USD-/EUR-Spalten
 
 @Composable
 fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
@@ -140,8 +140,8 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
             ) {
                 Text("Summe", Modifier.width(66.dp), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text("${rows.size} Zahlungen", Modifier.weight(1f), color = Color.White, fontSize = 11.sp)
-                Text(fmt(rows.sumOf { it.usd }), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Text(fmt(rows.sumOf { it.eur }), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("${fmt(rows.sumOf { it.usd })} $", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                Text("${fmt(rows.sumOf { it.eur })} €", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
             }
             Muted("Fett = Anleihewährung · Betrag = Nominal × Kupon (live umgerechnet) · ohne Rückzahlung des Nennwerts · ISIN antippen für Kurs & Chart", Modifier.padding(top = 4.dp), 9)
         }
@@ -191,7 +191,8 @@ private fun PayRowItem(r: PayRow, onIsin: () -> Unit) {
             Text(r.name, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row {
                 IsinLink(r.isin, onIsin)
-                Muted(" · ${fmt(r.nominal)} ${sym(r.currency)}${if (r.isMaturity) " · Fälligkeit" else ""}", size = 9)
+                Text("  ${fmt(r.nominal)} ${sym(r.currency)}", fontSize = 12.sp, lineHeight = 14.sp, maxLines = 1)
+                if (r.isMaturity) Muted("  · Fälligkeit", size = 9)
             }
         }
         Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (r.currency == "USD") FontWeight.Bold else FontWeight.Normal)

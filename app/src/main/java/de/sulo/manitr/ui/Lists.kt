@@ -37,9 +37,9 @@ import de.sulo.manitr.Presets
 import de.sulo.manitr.Rates
 import de.sulo.manitr.fmt
 
-data class TRow(val id: Long, val title: String, val chip: String?, val sub: String, val usd: Double, val nativeCcy: String?)
+data class TRow(val id: Long, val title: String, val chip: String?, val stock: String, val sub: String, val usd: Double, val nativeCcy: String?)
 
-private val COL = 72.dp   // Breite der USD-/EUR-Spalten (wie auf der Übersicht)
+private val COL = 82.dp   // Breite der USD-/EUR-Spalten (wie auf der Übersicht)
 
 @Composable
 private fun HoldingTable(
@@ -86,7 +86,10 @@ private fun HoldingTable(
                                 )
                             }
                         }
-                        Muted(r.sub, size = 9)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(r.stock, fontSize = 12.5.sp, lineHeight = 15.sp, maxLines = 1)
+                            if (r.sub.isNotEmpty()) Muted("  ·  ${r.sub}", size = 9)
+                        }
                     }
                     val usdBold = r.nativeCcy == "USD"
                     val eurBold = r.nativeCcy == "EUR"
@@ -102,8 +105,8 @@ private fun HoldingTable(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Summe", Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                Text(fmt(sum), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                Text(fmt(rates.toEur(sum)), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                Text("${fmt(sum)} $", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, softWrap = false)
+                Text("${fmt(rates.toEur(sum))} €", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, softWrap = false)
                 Box(Modifier.width(34.dp))
             }
             Muted(footer, Modifier.padding(top = 4.dp), 9)
@@ -116,7 +119,7 @@ private fun HoldingTable(
 fun FxScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
     val rates = vm.rates
     val rows = vm.portfolio.fx.map {
-        TRow(it.id, it.code, null, "${fmt(it.amount, 2)} ${it.code} · Kurs ${fmt(rates.usdPer[it.code] ?: Rates.FALLBACK[it.code] ?: 0.0, 4)} $", rates.toUsd(it.code, it.amount), it.code)
+        TRow(it.id, it.code, null, "${fmt(it.amount, 2)} ${it.code}", "Kurs ${fmt(rates.usdPer[it.code] ?: Rates.FALLBACK[it.code] ?: 0.0, 4)} $", rates.toUsd(it.code, it.amount), it.code)
     }
     HoldingTable(
         "Meine Devisen", Grp.FX, rows, rates, "Noch keine Devisen.\nTippe auf „Devise hinzufügen“.",
@@ -130,7 +133,7 @@ fun GoldScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
     val rates = vm.rates
     val rows = vm.portfolio.gold.map {
         val t = Presets.goldType(it.type)
-        TRow(it.id, t.name, null, "${fmt(it.amount, if (t.unit == "Stk") 0 else 2)} ${t.unit} · ${fmt(t.fineGrams * rates.goldUsdPerGram(), 2)} $ je ${t.unit}", Calc.goldUsd(it, rates), null)
+        TRow(it.id, t.name, null, "${fmt(it.amount, if (t.unit == "Stk") 0 else 2)} ${t.unit}", "${fmt(t.fineGrams * rates.goldUsdPerGram(), 2)} $ je ${t.unit}", Calc.goldUsd(it, rates), null)
     }
     HoldingTable(
         "Mein Gold", Grp.GOLD, rows, rates, "Noch kein Gold im Bestand.\nTippe auf „Gold hinzufügen“.",
@@ -143,7 +146,7 @@ fun GoldScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
 fun MiscScreen(vm: AppViewModel, onEdit: (Long) -> Unit, onRent: (Long?) -> Unit) {
     val rates = vm.rates
     val rows = vm.portfolio.misc.map {
-        TRow(it.id, it.name, it.category, "${fmt(it.amount, 0)} ${it.currency}", rates.toUsd(it.currency, it.amount), it.currency)
+        TRow(it.id, it.name, it.category, "${fmt(it.amount, 0)} ${it.currency}", "", rates.toUsd(it.currency, it.amount), it.currency)
     }
     HoldingTable(
         "Meine sonstigen Vermögenswerte", Grp.MISC, rows, rates, "Noch keine Einträge.\nTippe auf „Vermögenswert hinzufügen“.",
