@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,15 +117,15 @@ fun Glyph(text: String, color: Color, size: Dp = 24.dp) {
 }
 
 @Composable
-fun Muted(text: String, modifier: Modifier = Modifier, size: Int = 11) {
-    Text(text, color = C.Mute, fontSize = size.sp, modifier = modifier)
+fun Muted(text: String, modifier: Modifier = Modifier, size: Int = 11, align: TextAlign = TextAlign.Unspecified) {
+    Text(text, color = C.Mute, fontSize = size.sp, lineHeight = (size + 2).sp, textAlign = align, modifier = modifier)
 }
 
 @Composable
 fun SectionTitle(text: String) {
     Text(
         text.uppercase(), color = C.Mute, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.6.sp,
-        modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
     )
 }
 

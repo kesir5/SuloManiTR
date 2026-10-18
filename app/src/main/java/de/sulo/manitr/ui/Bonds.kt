@@ -56,6 +56,7 @@ private enum class BondSort(val label: String) {
 }
 
 private val PERIODS = listOf("1M" to 30, "3M" to 90, "1J" to 365)
+private val COL = 72.dp   // Breite der USD-/EUR-Spalten
 
 @Composable
 fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
@@ -91,12 +92,12 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
         if (sortAsc) c else -c
     }
 
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(bottom = 96.dp)) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 10.dp).padding(bottom = 88.dp)) {
         CdsCard(vm)
 
         // ---------- Auszahlungsplan ----------
         SectionTitle("Auszahlungsplan")
-        SCard(padding = 12.dp) {
+        SCard(padding = 8.dp, borderColor = Grp.BONDS.color) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFE8EDF5)).padding(2.dp)) {
                 listOf(true to "Nächste je Anleihe", false to "Nächste 12 Monate").forEach { (flag, label) ->
                     Text(
@@ -105,39 +106,44 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
                         color = if (onlyNext == flag) C.Pri else C.Ink,
                         modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
                             .background(if (onlyNext == flag) Color.White else Color.Transparent)
-                            .clickable { onlyNext = flag; detail = null }.padding(vertical = 7.dp),
+                            .clickable { onlyNext = flag; detail = null }.padding(vertical = 6.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                SortHeader("Datum", schedKey == SchedKey.DATE, schedAsc, Modifier.width(72.dp)) { if (schedKey == SchedKey.DATE) schedAsc = !schedAsc else { schedKey = SchedKey.DATE; schedAsc = true }; detail = null }
-                SortHeader("Eurobond", schedKey == SchedKey.NAME, schedAsc, Modifier.weight(1f)) { if (schedKey == SchedKey.NAME) schedAsc = !schedAsc else { schedKey = SchedKey.NAME; schedAsc = true }; detail = null }
-                SortHeader("$", schedKey == SchedKey.USD, schedAsc, Modifier.width(62.dp), End = true) { if (schedKey == SchedKey.USD) schedAsc = !schedAsc else { schedKey = SchedKey.USD; schedAsc = false }; detail = null }
-                Muted("€", Modifier.width(62.dp), 11)
-            }
-            if (rows.isEmpty()) {
-                Text("Noch keine Eurobonds im Bestand.\nTippe auf „Eurobond hinzufügen“.", color = C.Mute, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp))
-            }
-            rows.forEach { r ->
-                val key = "s:${r.holdingId}:${r.date}"
-                PayRowItem(r, onIsin = { detail = if (detail == key) null else key })
-                if (detail == key) {
-                    val v = views.firstOrNull { it.holding.id == r.holdingId }
-                    if (v != null) BondDetail(v, rates, period) { period = it }
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(C.Line))
-            }
+            Spacer(Modifier.height(6.dp))
+            // Kopfzeile
             Row(
-                Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(10.dp)).background(C.PriC).padding(horizontal = 8.dp, vertical = 9.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(Grp.BONDS.light).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Summe", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.width(72.dp))
-                Text("${rows.size} Zahlungen", fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text(fmt(rows.sumOf { it.usd }), Modifier.width(62.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Text(fmt(rows.sumOf { it.eur }), Modifier.width(62.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                SortHeader("Datum", schedKey == SchedKey.DATE, schedAsc, Modifier.width(66.dp)) { if (schedKey == SchedKey.DATE) schedAsc = !schedAsc else { schedKey = SchedKey.DATE; schedAsc = true }; detail = null }
+                SortHeader("Eurobond", schedKey == SchedKey.NAME, schedAsc, Modifier.weight(1f)) { if (schedKey == SchedKey.NAME) schedAsc = !schedAsc else { schedKey = SchedKey.NAME; schedAsc = true }; detail = null }
+                SortHeader("$ USD", schedKey == SchedKey.USD, schedAsc, Modifier.width(COL), end = true) { if (schedKey == SchedKey.USD) schedAsc = !schedAsc else { schedKey = SchedKey.USD; schedAsc = false }; detail = null }
+                Text("€ EUR", Modifier.width(COL), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
             }
-            Muted("Fett = Anleihewährung · Betrag = Nominal × Kupon (live umgerechnet) · Rückzahlung des Nennwerts bei Fälligkeit nicht enthalten · ISIN antippen für Kurs & Chart", Modifier.padding(top = 6.dp), 10)
+            if (rows.isEmpty()) {
+                Text("Noch keine Eurobonds im Bestand.\nTippe auf „Eurobond hinzufügen“.", color = C.Mute, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp))
+            }
+            rows.forEachIndexed { i, r ->
+                val key = "s:${r.holdingId}:${r.date}"
+                Column(Modifier.fillMaxWidth().background(if (i % 2 == 1) Color(0xFFEFF6F2) else Color.White)) {
+                    PayRowItem(r, onIsin = { detail = if (detail == key) null else key })
+                    if (detail == key) {
+                        val v = views.firstOrNull { it.holding.id == r.holdingId }
+                        if (v != null) BondDetail(v, rates, period) { period = it }
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)).background(Grp.BONDS.color).padding(horizontal = 4.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Summe", Modifier.width(66.dp), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("${rows.size} Zahlungen", Modifier.weight(1f), color = Color.White, fontSize = 11.sp)
+                Text(fmt(rows.sumOf { it.usd }), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(fmt(rows.sumOf { it.eur }), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            Muted("Fett = Anleihewährung · Betrag = Nominal × Kupon (live umgerechnet) · ohne Rückzahlung des Nennwerts · ISIN antippen für Kurs & Chart", Modifier.padding(top = 4.dp), 9)
         }
 
         // ---------- Meine Eurobonds ----------
@@ -164,32 +170,32 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
 }
 
 @Composable
-private fun SortHeader(text: String, active: Boolean, asc: Boolean, modifier: Modifier, End: Boolean = false, onClick: () -> Unit) {
+private fun SortHeader(text: String, active: Boolean, asc: Boolean, modifier: Modifier, end: Boolean = false, onClick: () -> Unit) {
     Text(
         text.uppercase() + if (active) (if (asc) " ▲" else " ▼") else "",
-        color = if (active) C.Pri else C.Mute, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold,
-        textAlign = if (End) TextAlign.End else TextAlign.Start,
-        modifier = modifier.clickable(onClick = onClick).padding(vertical = 4.dp),
+        color = if (active) C.Pri else Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold,
+        textAlign = if (end) TextAlign.End else TextAlign.Start,
+        modifier = modifier.clickable(onClick = onClick).padding(vertical = 5.dp),
     )
 }
 
 @Composable
 private fun PayRowItem(r: PayRow, onIsin: () -> Unit) {
     val chipBg = when { r.days <= 14 -> C.Soon; r.days <= 60 -> C.Mid; else -> C.Ok }
-    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.width(72.dp)) {
-            Text(r.date.deShort(), fontSize = 12.5.sp)
-            Text("in ${r.days} T.", fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).background(chipBg).padding(horizontal = 6.dp, vertical = 1.dp))
+    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(66.dp)) {
+            Text(r.date.deShort(), fontSize = 12.sp, lineHeight = 14.sp)
+            Text("in ${r.days} T.", fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(top = 1.dp).clip(RoundedCornerShape(6.dp)).background(chipBg).padding(horizontal = 5.dp, vertical = 1.dp))
         }
         Column(Modifier.weight(1f).padding(end = 4.dp)) {
-            Text(r.name, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(r.name, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row {
                 IsinLink(r.isin, onIsin)
-                Muted(" · ${fmt(r.nominal)} ${sym(r.currency)}${if (r.isMaturity) " · Fälligkeit" else ""}", size = 10)
+                Muted(" · ${fmt(r.nominal)} ${sym(r.currency)}${if (r.isMaturity) " · Fälligkeit" else ""}", size = 9)
             }
         }
-        Text(fmt(r.usd), Modifier.width(62.dp), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (r.currency == "USD") FontWeight.Bold else FontWeight.Normal)
-        Text(fmt(r.eur), Modifier.width(62.dp), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (r.currency == "EUR") FontWeight.Bold else FontWeight.Normal)
+        Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (r.currency == "USD") FontWeight.Bold else FontWeight.Normal)
+        Text(fmt(r.eur), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (r.currency == "EUR") FontWeight.Bold else FontWeight.Normal)
     }
 }
 
