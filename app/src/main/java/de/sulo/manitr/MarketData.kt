@@ -16,7 +16,7 @@ data class RefreshResult(val market: Market, val errors: List<String>)
  *  - Wechselkurse: Frankfurter-API (EZB-Referenzkurse), kostenlos, ohne Schlüssel
  *  - Gold: gold-api.com (XAU/USD), kostenlos, ohne Schlüssel
  *  - Eurobonds: Börse-Frankfurt-Kursverlauf (Tageskurse, ca. 400 Tage)
- *  - Türkei CDS 5J: investing.com (Seitenabruf; kann bei Änderungen der Seite ausfallen)
+ *  - Türkei CDS 5J: investing.com (de, Fallback en; Verlauf wird lokal fortgeschrieben, falls die Seite keine Tabelle liefert)
  * Schlägt eine Quelle fehl, bleibt der zuletzt gespeicherte Wert erhalten.
  */
 object MarketData {
@@ -28,7 +28,7 @@ object MarketData {
         val now = System.currentTimeMillis()
         val fxD = async(Dispatchers.IO) { runCatching { fetchFx() } }
         val goldD = async(Dispatchers.IO) { runCatching { fetchGold() } }
-        val cdsD = async(Dispatchers.IO) { runCatching { fetchCds(now) } }
+        val cdsD = async(Dispatchers.IO) { runCatching { fetchCds(now, old.cds) } }
         val bondDs = p.bonds.map { it.isin }.distinct().map { isin ->
             isin to async(Dispatchers.IO) { runCatching { fetchBond(isin, now) } }
         }
@@ -38,7 +38,7 @@ object MarketData {
 
         fxD.await().onSuccess { market = market.copy(usdPer = it) }.onFailure { errors += "Wechselkurse: ${it.msg()}" }
         goldD.await().onSuccess { market = market.copy(goldUsdPerOz = it) }.onFailure { errors += "Gold: ${it.msg()}" }
-        cdsD.await().onSuccess { market = market.copy(cds = it) }.onFailure { errors += "Türkei CDS: ${it.msg()}" }
+        cdsD.await().onSuccess { market = market.copy(cds = it.quote); if (it.historyNote != null) errors += "CDS-Verlauf (${it.historyNote})" }.onFailure { errors += "Türkei CDS: ${it.msg()}" }
 
         val quotes = old.bondQuotes.toMutableMap()
         for ((isin, d) in bondDs) {
@@ -126,39 +126,115 @@ object MarketData {
 
     // ---------- Türkei CDS 5J ----------
     private const val CDS_URL = "https://de.investing.com/rates-bonds/turkey-cds-5-year-usd"
+    private const val CDS_URL_EN = "https://www.investing.com/rates-bonds/turkey-cds-5-year-usd"
+    private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
     internal fun parseCdsCurrent(html: String): Double? =
         Regex("""aktueller Stand\s+([0-9][0-9.]*,[0-9]+)""").find(html)?.groupValues?.get(1)?.let(::parseGermanNumber)
 
-    internal fun parseCdsHistory(html: String): List<PricePoint> {
+    private fun parseEnglishNumber(s: String): Double? = s.trim().replace(",", "").toDoubleOrNull()
+
+    /** Tabelle der „Historischen Daten“ (deutsch dd.MM.yyyy / englisch MM/dd/yyyy bzw. „Oct 05, 2026“). */
+    private fun parseCdsTable(html: String): List<PricePoint> {
         val rowRe = Regex("""<tr[^>]*>(.*?)</tr>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
         val cellRe = Regex("""<t[dh][^>]*>(.*?)</t[dh]>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
         val tagRe = Regex("""<[^>]+>""")
-        val dateRe = Regex("""^(\d{2})\.(\d{2})\.(\d{4})$""")
+        val de = Regex("""(\d{2})\.(\d{2})\.(\d{4})""")
+        val us = Regex("""(\d{2})/(\d{2})/(\d{4})""")
+        val en = Regex("""([A-Z][a-z]{2})[a-z]*\.? (\d{1,2}), (\d{4})""")
         val out = mutableListOf<PricePoint>()
         for (row in rowRe.findAll(html)) {
-            val cells = cellRe.findAll(row.groupValues[1]).map { tagRe.replace(it.groupValues[1], "").trim() }.toList()
+            val cells = cellRe.findAll(row.groupValues[1])
+                .map { tagRe.replace(it.groupValues[1], "").replace("&nbsp;", " ").replace('\u00a0', ' ').trim() }.toList()
             if (cells.size < 2) continue
-            val m = dateRe.matchEntire(cells[0]) ?: continue
-            val value = parseGermanNumber(cells[1]) ?: continue
-            val date = LocalDate.of(m.groupValues[3].toInt(), m.groupValues[2].toInt(), m.groupValues[1].toInt())
+            val c0 = cells[0]
+            val date: LocalDate
+            val value: Double
+            val d1 = de.find(c0)
+            val d2 = us.find(c0)
+            val d3 = en.find(c0)
+            try {
+                when {
+                    d1 != null -> {
+                        date = LocalDate.of(d1.groupValues[3].toInt(), d1.groupValues[2].toInt(), d1.groupValues[1].toInt())
+                        value = parseGermanNumber(cells[1]) ?: continue
+                    }
+                    d2 != null -> {
+                        date = LocalDate.of(d2.groupValues[3].toInt(), d2.groupValues[1].toInt(), d2.groupValues[2].toInt())
+                        value = parseEnglishNumber(cells[1]) ?: continue
+                    }
+                    d3 != null -> {
+                        val mi = MONTHS.indexOf(d3.groupValues[1]) + 1
+                        if (mi == 0) continue
+                        date = LocalDate.of(d3.groupValues[3].toInt(), mi, d3.groupValues[2].toInt())
+                        value = parseEnglishNumber(cells[1]) ?: continue
+                    }
+                    else -> continue
+                }
+            } catch (e: java.time.DateTimeException) { continue }
             out += PricePoint(date.toEpochDay(), value)
         }
-        return out.sortedBy { it.epochDay }.distinctBy { it.epochDay }
+        return out
     }
 
-    private suspend fun fetchCds(now: Long): CdsQuote = withContext(Dispatchers.IO) {
-        val current = runCatching { parseCdsCurrent(get(CDS_URL, UA_DESKTOP)) }
-        val history = runCatching { parseCdsHistory(get("$CDS_URL-historical-data", UA_DESKTOP)) }.getOrDefault(emptyList())
-        val value = current.getOrNull() ?: history.lastOrNull()?.value
-            ?: throw current.exceptionOrNull() ?: java.io.IOException("Wert nicht gefunden")
-        val points = history.toMutableList()
+    /** Falls die Seite die Daten als eingebettetes JSON liefert (Next.js: rowDateTimestamp / last_closeRaw). */
+    private fun parseCdsJson(html: String): List<PricePoint> {
+        val out = mutableListOf<PricePoint>()
+        val iso = Regex(""""rowDateTimestamp"\s*:\s*"(\d{4})-(\d{2})-(\d{2})[^"]*"[^{}]*?"last_closeRaw"\s*:\s*"?(-?[0-9]+(?:\.[0-9]+)?)"?""")
+        for (m in iso.findAll(html)) {
+            val v = m.groupValues[4].toDoubleOrNull() ?: continue
+            runCatching { LocalDate.of(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt()) }
+                .onSuccess { out += PricePoint(it.toEpochDay(), v) }
+        }
+        if (out.isEmpty()) {
+            val epoch = Regex(""""rowDateRaw"\s*:\s*"?(\d{9,10})"?[^{}]*?"last_closeRaw"\s*:\s*"?(-?[0-9]+(?:\.[0-9]+)?)"?""")
+            for (m in epoch.findAll(html)) {
+                val v = m.groupValues[2].toDoubleOrNull() ?: continue
+                out += PricePoint(m.groupValues[1].toLong() / 86_400, v)
+            }
+        }
+        return out
+    }
+
+    internal fun parseCdsHistory(html: String): List<PricePoint> {
+        val table = parseCdsTable(html)
+        val pts = if (table.size >= 2) table else parseCdsJson(html).ifEmpty { table }
+        return pts.sortedBy { it.epochDay }.distinctBy { it.epochDay }
+    }
+
+    /** Alte und neue Punkte zusammenführen (neu gewinnt), höchstens ~13 Monate behalten. */
+    internal fun mergeHistory(old: List<PricePoint>, fresh: List<PricePoint>): List<PricePoint> {
+        val map = sortedMapOf<Long, Double>()
+        old.forEach { map[it.epochDay] = it.value }
+        fresh.forEach { map[it.epochDay] = it.value }
+        return map.entries.map { PricePoint(it.key, it.value) }.takeLast(400)
+    }
+
+    private data class CdsResult(val quote: CdsQuote, val historyNote: String?)
+
+    private suspend fun fetchCds(now: Long, old: CdsQuote?): CdsResult = withContext(Dispatchers.IO) {
+        var current: Double? = null
+        var currentErr: Throwable? = null
+        var history = emptyList<PricePoint>()
+        val notes = mutableListOf<String>()
+        try { current = parseCdsCurrent(get(CDS_URL, UA_DESKTOP)) } catch (e: Exception) { currentErr = e }
+        for ((label, url) in listOf("de" to "$CDS_URL-historical-data", "en" to "$CDS_URL_EN-historical-data")) {
+            try {
+                val h = parseCdsHistory(get(url, UA_DESKTOP))
+                if (h.size >= 2) { history = h; break }
+                notes += "$label: keine Tabelle gefunden"
+            } catch (e: Exception) { notes += "$label: ${e.msg()}" }
+        }
+        val merged = mergeHistory(old?.history.orEmpty(), history)
+        val value = current ?: history.lastOrNull()?.value ?: merged.lastOrNull()?.value
+            ?: throw currentErr ?: java.io.IOException("Wert nicht gefunden")
+        val points = merged.toMutableList()
         // aktuellen Stand als letzten Punkt ergänzen, wenn er vom letzten Historienwert abweicht
         if (points.isEmpty() || kotlin.math.abs(points.last().value - value) > 1e-9) {
             val today = LocalDate.now().toEpochDay()
             if (points.isNotEmpty() && points.last().epochDay == today) points.removeAt(points.lastIndex)
             points += PricePoint(today, value)
         }
-        CdsQuote(value = value, history = points, fetchedAt = now)
+        CdsResult(CdsQuote(value = value, history = points, fetchedAt = now), if (history.size >= 2) null else notes.joinToString(", "))
     }
 }

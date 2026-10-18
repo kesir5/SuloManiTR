@@ -355,6 +355,7 @@ private fun CdsCard(vm: AppViewModel) {
         }
         Spacer(Modifier.height(6.dp))
         ChartBlock(cds.history, 2, higherIsBad = true, height = 80.dp)
+        if (cds.history.size < 2) Muted("Der Verlauf wird mit jeder Aktualisierung länger – investing.com lieferte keine Verlaufstabelle (Details auf der Übersicht).", Modifier.padding(top = 4.dp), 10)
         Muted("Höher = höheres Ausfallrisiko (Rot bei Anstieg) · Quelle: investing.com", Modifier.padding(top = 6.dp), 10)
     }
 }

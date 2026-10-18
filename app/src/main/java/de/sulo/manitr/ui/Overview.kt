@@ -51,7 +51,7 @@ fun positionsOf(vm: AppViewModel, rates: Rates, today: LocalDate): Map<Grp, List
             PosRow(t.name, "${fmt(h.amount, if (t.unit == "Stk") 0 else 2)} ${t.unit}", Calc.goldUsd(h, rates))
         },
         Grp.BONDS to Calc.bondViews(p, vm.market, rates, today).map {
-            PosRow(it.info.name, "Nominal ${fmt(it.holding.nominal)} ${sym(it.info.currency)} · Kurs ${fmt(it.price, 2)} %", it.mvUsd)
+            PosRow(it.info.name, "${fmt(it.holding.nominal)} ${sym(it.info.currency)} · Kurs ${fmt(it.price, 2)} %", it.mvUsd)
         },
         Grp.MISC to p.misc.map { PosRow(it.name, "${it.category} · ${fmt(it.amount)} ${it.currency}", rates.toUsd(it.currency, it.amount)) },
     )
@@ -257,14 +257,14 @@ private fun PositionGroup(g: Grp, rows: List<PosRow>, sumUsd: Double, rates: Rat
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp))
                             .background(if (i % 2 == 1) g.light.copy(alpha = .55f) else Color.Transparent).padding(vertical = 3.dp, horizontal = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
                         Column(Modifier.weight(1f)) {
                             Row {
                                 Text(r.title, fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
                                 if (r.tag.isNotEmpty()) Text("  ${r.tag}", fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1, color = C.Orange, fontWeight = FontWeight.SemiBold)
                             }
-                            Muted(r.sub, size = 9)
+                            Text(r.sub, fontSize = 11.5.sp, lineHeight = 14.sp, color = C.Mute, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 11.5.sp)
                         Text(fmt(rates.toEur(r.usd)), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 11.5.sp)

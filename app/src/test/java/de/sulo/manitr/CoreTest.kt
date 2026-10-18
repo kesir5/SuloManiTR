@@ -150,5 +150,15 @@ class CoreTest {
         assertEquals(2, h.size)
         assertEquals(255.69, h.first().value, 0.0)          // aufsteigend sortiert
         assertEquals(LocalDate.of(2026, 10, 5).toEpochDay(), h.last().epochDay)
+
+        // englische Tabelle (www.investing.com)
+        val en = MarketData.parseCdsHistory("<table><tr><td>Oct 05, 2026</td><td>1,255.29</td></tr><tr><td>10/02/2026</td><td>255.69</td></tr></table>")
+        assertEquals(2, en.size); assertEquals(1255.29, en.last().value, 0.0)
+        // eingebettetes JSON
+        val js = MarketData.parseCdsHistory("{\"data\":[{\"rowDateRaw\":1759622400,\"rowDateTimestamp\":\"2026-10-05T00:00:00Z\",\"last_close\":\"255.29\",\"last_closeRaw\":\"255.29\"},{\"rowDateTimestamp\":\"2026-10-02T00:00:00Z\",\"last_closeRaw\":255.69}]}")
+        assertEquals(2, js.size); assertEquals(255.29, js.last().value, 0.0)
+        // Zusammenführen
+        val merged = MarketData.mergeHistory(listOf(PricePoint(1, 1.0), PricePoint(2, 2.0)), listOf(PricePoint(2, 5.0), PricePoint(3, 3.0)))
+        assertEquals(listOf(1.0, 5.0, 3.0), merged.map { it.value })
     }
 }
