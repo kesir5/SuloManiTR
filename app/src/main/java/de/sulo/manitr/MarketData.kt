@@ -16,7 +16,7 @@ data class RefreshResult(val market: Market, val errors: List<String>)
  *  - Wechselkurse: Frankfurter-API (EZB-Referenzkurse), kostenlos, ohne Schlüssel
  *  - Gold: gold-api.com (XAU/USD), kostenlos, ohne Schlüssel
  *  - Eurobonds: Börse-Frankfurt-Kursverlauf (Tageskurse, ca. 400 Tage)
- *  - Türkei CDS 5J: investing.com (de, Fallback en; Verlauf wird lokal fortgeschrieben, falls die Seite keine Tabelle liefert)
+ *  - Türkei CDS 5J: worldgovernmentbonds.com (JSON-Schnittstelle, Tageswerte seit 2015); Fallback investing.com
  * Schlägt eine Quelle fehl, bleibt der zuletzt gespeicherte Wert erhalten.
  */
 object MarketData {
@@ -212,7 +212,68 @@ object MarketData {
 
     private data class CdsResult(val quote: CdsQuote, val historyNote: String?)
 
+    // ----- Hauptquelle: worldgovernmentbonds.com (JSON, tägliche Werte seit 2015) -----
+    private const val WGB_URL = "https://www.worldgovernmentbonds.com/wp-json/common/v1/historical"
+    private const val WGB_BODY =
+        """{"GLOBALVAR":{"FUNCTION":"CDS","DOMESTIC":true,"DATE_RIF":"2099-12-31","COUNTRY1":{"SYMBOL":"13"},"OBJ1":{"DURATA":60}}}"""
+
+    internal fun parseWgbCds(body: String): List<PricePoint> {
+        val root = JSONObject(body)
+        if (!root.optBoolean("success", false)) throw java.io.IOException("Antwort ohne Daten")
+        val quote = root.getJSONObject("result").getJSONObject("quote")
+        val pts = ArrayList<PricePoint>(quote.length())
+        for (k in quote.keys()) {
+            val o = quote.getJSONObject(k)
+            val v = o.optDouble("CLOSE_VAL", Double.NaN)
+            val d = o.optString("DATA_VAL", "")
+            if (v.isNaN() || v <= 0 || d.length < 10) continue
+            val day = runCatching { LocalDate.parse(d.substring(0, 10)) }.getOrNull() ?: continue
+            pts += PricePoint(day.toEpochDay(), v)
+        }
+        val sorted = pts.sortedBy { it.epochDay }.distinctBy { it.epochDay }
+        // Wochenenden mit unverändertem Vortageswert sind Kopien → weglassen
+        val out = ArrayList<PricePoint>(sorted.size)
+        for (p in sorted) {
+            val dow = LocalDate.ofEpochDay(p.epochDay).dayOfWeek.value   // 6 = Sa, 7 = So
+            if (dow >= 6 && out.isNotEmpty() && out.last().value == p.value) continue
+            out += p
+        }
+        return out
+    }
+
+    private fun post(url: String, body: String): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        try {
+            c.requestMethod = "POST"
+            c.connectTimeout = 12_000
+            c.readTimeout = 25_000
+            c.doOutput = true
+            c.setRequestProperty("User-Agent", UA_DESKTOP)
+            c.setRequestProperty("Content-Type", "application/json")
+            c.setRequestProperty("Accept", "application/json")
+            c.setRequestProperty("Origin", "https://www.worldgovernmentbonds.com")
+            c.setRequestProperty("Referer", "https://www.worldgovernmentbonds.com/cds-historical-data/turkey/5-years/")
+            c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val code = c.responseCode
+            if (code != 200) throw java.io.IOException("HTTP $code")
+            return c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            c.disconnect()
+        }
+    }
+
     private suspend fun fetchCds(now: Long, old: CdsQuote?): CdsResult = withContext(Dispatchers.IO) {
+        // 1) worldgovernmentbonds.com
+        var wgbError: String? = null
+        try {
+            val pts = parseWgbCds(post(WGB_URL, WGB_BODY))
+            if (pts.size >= 2) {
+                val hist = pts.takeLast(400)
+                return@withContext CdsResult(CdsQuote(hist.last().value, hist, now, "worldgovernmentbonds.com"), null)
+            }
+            wgbError = "zu wenige Datenpunkte"
+        } catch (e: Exception) { wgbError = e.msg() }
+        // 2) Fallback: investing.com
         var current: Double? = null
         var currentErr: Throwable? = null
         var history = emptyList<PricePoint>()
@@ -235,6 +296,6 @@ object MarketData {
             if (points.isNotEmpty() && points.last().epochDay == today) points.removeAt(points.lastIndex)
             points += PricePoint(today, value)
         }
-        CdsResult(CdsQuote(value = value, history = points, fetchedAt = now), if (history.size >= 2) null else notes.joinToString(", "))
+        CdsResult(CdsQuote(value = value, history = points, fetchedAt = now, source = "investing.com"), "worldgovernmentbonds: $wgbError" + if (history.size >= 2) "" else ", " + notes.joinToString(", "))
     }
 }

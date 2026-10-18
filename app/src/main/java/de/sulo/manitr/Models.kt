@@ -108,6 +108,7 @@ data class CdsQuote(
     val value: Double,
     val history: List<PricePoint>,
     val fetchedAt: Long,
+    val source: String = "investing.com",
 ) {
     val change: Double? get() = if (history.size >= 2) history.last().value - history[history.size - 2].value else null
     val changePct: Double? get() = change?.let { c -> history[history.size - 2].value.takeIf { it != 0.0 }?.let { c / it * 100 } }

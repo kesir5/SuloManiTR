@@ -67,7 +67,7 @@ object Json {
                 .put("asOf", it.asOf?.toString() ?: JSONObject.NULL).put("source", it.source)
                 .put("fetchedAt", it.fetchedAt).put("history", historyToJson(it.history))
         }))
-        m.cds?.let { put("cds", JSONObject().put("value", it.value).put("fetchedAt", it.fetchedAt).put("history", historyToJson(it.history))) }
+        m.cds?.let { put("cds", JSONObject().put("value", it.value).put("fetchedAt", it.fetchedAt).put("source", it.source).put("history", historyToJson(it.history))) }
     }
 
     fun marketFromJson(o: JSONObject): Market {
@@ -81,7 +81,7 @@ object Json {
             )
         }.associateBy { it.isin }
         val cds = o.optJSONObject("cds")?.let {
-            CdsQuote(it.getDouble("value"), historyFromJson(it.optJSONArray("history")), it.optLong("fetchedAt", 0))
+            CdsQuote(it.getDouble("value"), historyFromJson(it.optJSONArray("history")), it.optLong("fetchedAt", 0), it.optString("source", "investing.com"))
         }
         return Market(
             usdPer = rates, goldUsdPerOz = o.optDoubleOrNull("goldUsdPerOz"), bondQuotes = quotes, cds = cds,

@@ -335,7 +335,7 @@ private fun CdsCard(vm: AppViewModel) {
         Muted("Türkei CDS 5 Jahre (USD)")
         if (cds == null) {
             Text("Noch nicht abgerufen", fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
-            Muted("Wird beim Aktualisieren von investing.com geladen. Falls die Seite nicht erreichbar ist, bleibt das Feld leer.", Modifier.padding(top = 4.dp), 10)
+            Muted("Wird beim Aktualisieren von worldgovernmentbonds.com geladen. Falls die Seite nicht erreichbar ist, bleibt das Feld leer.", Modifier.padding(top = 4.dp), 10)
             return@SCard
         }
         val chg = cds.change
@@ -355,7 +355,7 @@ private fun CdsCard(vm: AppViewModel) {
         }
         Spacer(Modifier.height(6.dp))
         ChartBlock(cds.history, 2, higherIsBad = true, height = 80.dp)
-        if (cds.history.size < 2) Muted("Der Verlauf wird mit jeder Aktualisierung länger – investing.com lieferte keine Verlaufstabelle (Details auf der Übersicht).", Modifier.padding(top = 4.dp), 10)
-        Muted("Höher = höheres Ausfallrisiko (Rot bei Anstieg) · Quelle: investing.com", Modifier.padding(top = 6.dp), 10)
+        if (cds.history.size < 2) Muted("Der Verlauf wird mit jeder Aktualisierung länger – die Quelle lieferte keine Verlaufsdaten (Details auf der Übersicht).", Modifier.padding(top = 4.dp), 10)
+        Muted("Höher = höheres Ausfallrisiko (Rot bei Anstieg) · Quelle: ${cds.source}", Modifier.padding(top = 6.dp), 10)
     }
 }

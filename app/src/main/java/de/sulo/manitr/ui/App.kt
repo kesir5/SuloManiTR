@@ -165,7 +165,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
                 when (tabs[page]) {
                     Tab.HOME -> OverviewScreen(vm)
                     Tab.FX -> FxScreen(vm) { openDialog(Tab.FX, it) }

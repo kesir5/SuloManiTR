@@ -157,6 +157,9 @@ class CoreTest {
         // eingebettetes JSON
         val js = MarketData.parseCdsHistory("{\"data\":[{\"rowDateRaw\":1759622400,\"rowDateTimestamp\":\"2026-10-05T00:00:00Z\",\"last_close\":\"255.29\",\"last_closeRaw\":\"255.29\"},{\"rowDateTimestamp\":\"2026-10-02T00:00:00Z\",\"last_closeRaw\":255.69}]}")
         assertEquals(2, js.size); assertEquals(255.29, js.last().value, 0.0)
+        // worldgovernmentbonds.com (JSON); Wochenend-Kopie wird entfernt
+        val wgb = MarketData.parseWgbCds("{\"success\":true,\"result\":{\"quote\":{\"2\":{\"CLOSE_VAL\":245.27,\"DATA_VAL\":\"2026-10-16\"},\"1\":{\"CLOSE_VAL\":243.28,\"DATA_VAL\":\"2026-10-14\"},\"3\":{\"CLOSE_VAL\":245.27,\"DATA_VAL\":\"2026-10-17\"},\"4\":{\"CLOSE_VAL\":247.33,\"DATA_VAL\":\"2026-10-19\"}}}}")
+        assertEquals(listOf(243.28, 245.27, 247.33), wgb.map { it.value })
         // Zusammenführen
         val merged = MarketData.mergeHistory(listOf(PricePoint(1, 1.0), PricePoint(2, 2.0)), listOf(PricePoint(2, 5.0), PricePoint(3, 3.0)))
         assertEquals(listOf(1.0, 5.0, 3.0), merged.map { it.value })
