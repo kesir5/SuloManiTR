@@ -57,7 +57,7 @@ data class Totals(val fx: Double, val gold: Double, val bonds: Double, val misc:
     val total: Double get() = fx + gold + bonds + misc
 }
 
-data class PosRow(val title: String, val sub: String, val usd: Double)
+data class PosRow(val title: String, val sub: String, val usd: Double, val tag: String = "")
 
 object Calc {
 

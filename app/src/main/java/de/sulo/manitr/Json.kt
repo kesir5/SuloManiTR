@@ -17,7 +17,7 @@ object Json {
     // ---------- Portfolio ----------
     fun portfolioToJson(p: Portfolio): JSONObject = JSONObject().apply {
         put("nextId", p.nextId)
-        put("fx", JSONArray(p.fx.map { JSONObject().put("id", it.id).put("code", it.code).put("amount", it.amount) }))
+        put("fx", JSONArray(p.fx.map { JSONObject().put("id", it.id).put("code", it.code).put("amount", it.amount).put("label", it.label) }))
         put("gold", JSONArray(p.gold.map { JSONObject().put("id", it.id).put("type", it.type).put("amount", it.amount) }))
         put("bondInfos", JSONArray(p.bondInfos.map {
             JSONObject().put("isin", it.isin).put("name", it.name).put("currency", it.currency)
@@ -41,7 +41,7 @@ object Json {
             )
         }
         return Portfolio(
-            fx = o.optJSONArray("fx").mapObjects { FxHolding(it.getLong("id"), it.getString("code"), it.getDouble("amount")) },
+            fx = o.optJSONArray("fx").mapObjects { FxHolding(it.getLong("id"), it.getString("code"), it.getDouble("amount"), it.optString("label", "")) },
             gold = o.optJSONArray("gold").mapObjects { GoldHolding(it.getLong("id"), it.getString("type"), it.getDouble("amount")) },
             bondInfos = infos.ifEmpty { Presets.bonds },
             bonds = o.optJSONArray("bonds").mapObjects { BondHolding(it.getLong("id"), it.getString("isin"), it.getDouble("nominal")) },

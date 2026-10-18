@@ -45,7 +45,7 @@ import java.time.LocalDate
 fun positionsOf(vm: AppViewModel, rates: Rates, today: LocalDate): Map<Grp, List<PosRow>> {
     val p = vm.portfolio
     return mapOf(
-        Grp.FX to p.fx.map { PosRow("${it.code} – ${Presets.currencies[it.code] ?: it.code}", "${fmt(it.amount)} ${it.code}", rates.toUsd(it.code, it.amount)) },
+        Grp.FX to p.fx.map { PosRow("${it.code} – ${Presets.currencies[it.code] ?: it.code}", "${fmt(it.amount)} ${it.code}", rates.toUsd(it.code, it.amount), it.label) },
         Grp.GOLD to p.gold.map { h ->
             val t = Presets.goldType(h.type)
             PosRow(t.name, "${fmt(h.amount, if (t.unit == "Stk") 0 else 2)} ${t.unit}", Calc.goldUsd(h, rates))
@@ -260,7 +260,10 @@ private fun PositionGroup(g: Grp, rows: List<PosRow>, sumUsd: Double, rates: Rat
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(r.title, fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1)
+                            Row {
+                                Text(r.title, fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                                if (r.tag.isNotEmpty()) Text("  ${r.tag}", fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1, color = C.Orange, fontWeight = FontWeight.SemiBold)
+                            }
                             Muted(r.sub, size = 9)
                         }
                         Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 11.5.sp)

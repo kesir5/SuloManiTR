@@ -3,7 +3,7 @@ package de.sulo.manitr
 import java.time.LocalDate
 
 /** Devisenbestand, z. B. 12.000 USD */
-data class FxHolding(val id: Long, val code: String, val amount: Double)
+data class FxHolding(val id: Long, val code: String, val amount: Double, val label: String = "")
 
 /** Goldbestand; [type] verweist auf [GoldType.key] */
 data class GoldHolding(val id: Long, val type: String, val amount: Double)

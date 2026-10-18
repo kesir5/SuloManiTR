@@ -32,9 +32,9 @@ private fun currencyOptions() = Presets.currencies.map { (k, v) -> k to "$k – 
 @Composable
 fun FxDialog(vm: AppViewModel, id: Long?, onDismiss: () -> Unit) {
     val item = vm.portfolio.fx.firstOrNull { it.id == id }
-    val used = vm.portfolio.fx.map { it.code }.toSet()
-    val free = currencyOptions().filter { it.first !in used || it.first == item?.code }
+    val free = currencyOptions()
     var code by remember { mutableStateOf(item?.code ?: free.firstOrNull()?.first ?: "") }
+    var label by remember { mutableStateOf(item?.label ?: "") }
     var amount by remember { mutableStateOf(item?.amount?.let { plain(it) } ?: "") }
     val value = parseInput(amount)
     val rates = vm.rates
@@ -43,11 +43,11 @@ fun FxDialog(vm: AppViewModel, id: Long?, onDismiss: () -> Unit) {
         confirmText = if (item == null) "Hinzufügen" else "Speichern",
         confirmEnabled = code.isNotEmpty() && value != null && value > 0,
         onDismiss = onDismiss,
-        onConfirm = { vm.saveFx(item?.id, code, value!!); onDismiss() },
+        onConfirm = { vm.saveFx(item?.id, code, value!!, label); onDismiss() },
         onDelete = item?.let { { vm.removeFx(it.id); onDismiss() } },
     ) {
-        if (free.isEmpty()) Text("Alle verfügbaren Währungen sind bereits angelegt.")
         DropdownField("Währung", currencyOptions().firstOrNull { it.first == code }?.second ?: code, free, { code = it }, enabled = item == null)
+        TextInput("Bezeichnung (optional, max. 12 Zeichen)", label, { label = it.take(12) }, placeholder = "z. B. Bank A, Tresor")
         NumberField("Betrag", amount, { amount = it }, suffix = code)
         if (value != null && value > 0) {
             val usd = rates.toUsd(code, value)

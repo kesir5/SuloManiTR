@@ -50,15 +50,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun changeDisplayCcy(c: String) { displayCcy = c; persist() }
 
     // ---------- Devisen ----------
-    fun saveFx(id: Long?, code: String, amount: Double) = update { p ->
-        if (id == null) p.copy(fx = p.fx + FxHolding(p.nextId, code, amount), nextId = p.nextId + 1)
-        else p.copy(fx = p.fx.map { if (it.id == id) it.copy(code = code, amount = amount) else it })
+    fun saveFx(id: Long?, code: String, amount: Double, label: String = "") = update { p ->
+        val tag = label.trim().take(12)
+        if (id == null) p.copy(fx = p.fx + FxHolding(p.nextId, code, amount, tag), nextId = p.nextId + 1)
+        else p.copy(fx = p.fx.map { if (it.id == id) it.copy(code = code, amount = amount, label = tag) else it })
     }
 
     fun removeFx(id: Long) {
         val item = portfolio.fx.firstOrNull { it.id == id } ?: return
         update { p -> p.copy(fx = p.fx.filterNot { it.id == id }) }
-        events.tryEmit(Event("${item.code} entfernt") { update { p -> p.copy(fx = p.fx + item) } })
+        events.tryEmit(Event("${item.code}${if (item.label.isNotEmpty()) " " + item.label else ""} entfernt") { update { p -> p.copy(fx = p.fx + item) } })
     }
 
     // ---------- Gold ----------

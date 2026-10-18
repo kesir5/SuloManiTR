@@ -37,7 +37,7 @@ import de.sulo.manitr.Presets
 import de.sulo.manitr.Rates
 import de.sulo.manitr.fmt
 
-data class TRow(val id: Long, val title: String, val chip: String?, val stock: String, val sub: String, val usd: Double, val nativeCcy: String?)
+data class TRow(val id: Long, val title: String, val chip: String?, val stock: String, val sub: String, val usd: Double, val nativeCcy: String?, val tag: String = "")
 
 private val COL = 82.dp   // Breite der USD-/EUR-Spalten (wie auf der Übersicht)
 
@@ -74,11 +74,12 @@ private fun HoldingTable(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                         .background(if (i % 2 == 1) grp.light.copy(alpha = .55f) else Color.Transparent)
                         .clickable { onEdit(r.id) }.padding(start = 4.dp, top = 3.dp, bottom = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(r.title, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, lineHeight = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                            if (r.tag.isNotEmpty()) Text("  ${r.tag}", fontSize = 12.5.sp, lineHeight = 15.sp, maxLines = 1, color = C.Orange, fontWeight = FontWeight.SemiBold)
                             r.chip?.let {
                                 Text(
                                     it, fontSize = 9.sp, color = grp.color,
@@ -88,13 +89,13 @@ private fun HoldingTable(
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(r.stock, fontSize = 12.5.sp, lineHeight = 15.sp, maxLines = 1)
-                            if (r.sub.isNotEmpty()) Muted("  ·  ${r.sub}", size = 9)
                         }
+                        if (r.sub.isNotEmpty()) Text(r.sub, fontSize = 12.5.sp, lineHeight = 15.sp, color = C.Pri, maxLines = 1)
                     }
                     val usdBold = r.nativeCcy == "USD"
                     val eurBold = r.nativeCcy == "EUR"
-                    Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 12.5.sp, fontWeight = if (usdBold) FontWeight.Bold else FontWeight.Normal)
-                    Text(fmt(rates.toEur(r.usd)), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 12.5.sp, fontWeight = if (eurBold) FontWeight.Bold else FontWeight.Normal)
+                    Text(fmt(r.usd), Modifier.width(COL).padding(top = 1.dp), textAlign = TextAlign.End, fontSize = 12.5.sp, fontWeight = if (usdBold) FontWeight.Bold else FontWeight.Normal)
+                    Text(fmt(rates.toEur(r.usd)), Modifier.width(COL).padding(top = 1.dp), textAlign = TextAlign.End, fontSize = 12.5.sp, fontWeight = if (eurBold) FontWeight.Bold else FontWeight.Normal)
                     IconButton(onClick = { onDelete(r.id) }, modifier = Modifier.size(34.dp)) {
                         Icon(Icons.Default.Delete, contentDescription = "Entfernen", tint = C.Neg, modifier = Modifier.size(18.dp))
                     }
@@ -119,7 +120,7 @@ private fun HoldingTable(
 fun FxScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
     val rates = vm.rates
     val rows = vm.portfolio.fx.map {
-        TRow(it.id, it.code, null, "${fmt(it.amount, 2)} ${it.code}", "Kurs ${fmt(rates.usdPer[it.code] ?: Rates.FALLBACK[it.code] ?: 0.0, 4)} $", rates.toUsd(it.code, it.amount), it.code)
+        TRow(it.id, it.code, null, "${fmt(it.amount, 2)} ${it.code}", "Kurs ${fmt(rates.usdPer[it.code] ?: Rates.FALLBACK[it.code] ?: 0.0, 4)} $", rates.toUsd(it.code, it.amount), it.code, it.label)
     }
     HoldingTable(
         "Meine Devisen", Grp.FX, rows, rates, "Noch keine Devisen.\nTippe auf „Devise hinzufügen“.",

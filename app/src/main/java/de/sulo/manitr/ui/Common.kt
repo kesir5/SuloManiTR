@@ -69,6 +69,7 @@ object C {
     val Line = Color(0xFFE2E6EC)
     val Pos = Color(0xFF14804A)
     val Neg = Color(0xFFBA1A1A)
+    val Orange = Color(0xFFC25E00)
     val Soon = Color(0xFFF4C7C3)
     val Mid = Color(0xFFFDEBC8)
     val Ok = Color(0xFFE3F1E5)

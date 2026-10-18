@@ -73,14 +73,14 @@ class CoreTest {
     @Test
     fun totals_sumAllClasses() {
         val p = Portfolio(
-            fx = listOf(FxHolding(1, "EUR", 1000.0), FxHolding(2, "USD", 500.0)),
+            fx = listOf(FxHolding(1, "EUR", 1000.0, "Bank A"), FxHolding(2, "USD", 500.0), FxHolding(3, "EUR", 250.0, "Tresor")),
             gold = listOf(GoldHolding(3, "ounce", 1.0)),
             bonds = listOf(BondHolding(4, cq19.isin, 10_000.0)),
             misc = listOf(MiscHolding(5, "Auto", "Fahrzeug", "EUR", 10_000.0)),
         )
         val m = Market(bondQuotes = mapOf(cq19.isin to BondQuote(cq19.isin, 99.0, 98.9, today, emptyList(), "t", 0)))
         val t = Calc.totals(p, m, rates, today)
-        assertEquals(1000 * 1.1236 + 500, t.fx, 0.001)
+        assertEquals(1250 * 1.1236 + 500, t.fx, 0.001)
         assertEquals(4166.1, t.gold, 0.001)
         assertEquals(9_900.0, t.bonds, 0.001)
         assertEquals(11_236.0, t.misc, 0.001)
