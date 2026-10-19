@@ -30,9 +30,9 @@ import de.sulo.manitr.AppViewModel
 import de.sulo.manitr.Rates
 import de.sulo.manitr.fmt
 
-private val TL = 64.dp
-private val EU = 64.dp
-private val US = 64.dp
+private val TL = 72.dp
+private val EU = 62.dp
+private val US = 62.dp
 private val DEL = 34.dp
 
 /** Abschnitt „Mieten“ auf dem Misc-Bildschirm: Miete in TL, umgerechnet in EUR und USD. */
@@ -55,8 +55,8 @@ fun RentSection(vm: AppViewModel, onOpen: (Long?) -> Unit) {
             Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(g.light).padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("PROPERTY (MIETE / MONAT)", Modifier.weight(1f), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp, maxLines = 1)
-            Text("TL", Modifier.width(TL), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+            Text("PROPERTY", Modifier.weight(1f), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp, maxLines = 1)
+            Text("TL / MONAT", Modifier.width(TL), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
             Text("€ EUR", Modifier.width(EU), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
             Text("$ USD", Modifier.width(US), color = g.color, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
             Box(Modifier.width(DEL))
@@ -76,7 +76,7 @@ fun RentSection(vm: AppViewModel, onOpen: (Long?) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(r.property, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, lineHeight = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(fmt(r.rentTry), Modifier.width(TL), textAlign = TextAlign.End, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                Text(fmt(r.rentTry), Modifier.width(TL), textAlign = TextAlign.End, fontSize = fitSize(fmt(r.rentTry), 12.5f).sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                 Text(fmt(rates.toEur(usd)), Modifier.width(EU), textAlign = TextAlign.End, fontSize = 12.5.sp)
                 Text(fmt(usd), Modifier.width(US), textAlign = TextAlign.End, fontSize = 12.5.sp)
                 IconButton(onClick = { vm.removeRent(r.id) }, modifier = Modifier.size(DEL)) {
@@ -90,14 +90,26 @@ fun RentSection(vm: AppViewModel, onOpen: (Long?) -> Unit) {
     }
 }
 
+/** Schriftgröße je nach Textlänge, damit lange Summen in die Spalte passen. */
+private fun fitSize(text: String, base: Float = 12f): Float = when {
+    text.length <= 7 -> base
+    text.length == 8 -> base - 1f
+    text.length == 9 -> base - 2f
+    text.length == 10 -> base - 3f
+    else -> base - 4f
+}
+
 @Composable
 private fun SumRow(label: String, tl: Double, rates: Rates, bg: Color, fg: Color, modifier: Modifier) {
     val usd = rates.toUsd("TRY", tl)
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(bg).padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = fg, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
-        Text(fmt(tl), Modifier.width(TL), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text("${fmt(rates.toEur(usd))} €", Modifier.width(EU), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
-        Text("${fmt(usd)} $", Modifier.width(US), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+        val tlT = fmt(tl)
+        val eurT = "${fmt(rates.toEur(usd))} €"
+        val usdT = "${fmt(usd)} $"
+        Text(tlT, Modifier.width(TL), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = fitSize(tlT).sp, maxLines = 1, softWrap = false)
+        Text(eurT, Modifier.width(EU), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = fitSize(eurT).sp, maxLines = 1, softWrap = false)
+        Text(usdT, Modifier.width(US), color = fg, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = fitSize(usdT).sp, maxLines = 1, softWrap = false)
         Box(Modifier.width(DEL))
     }
 }

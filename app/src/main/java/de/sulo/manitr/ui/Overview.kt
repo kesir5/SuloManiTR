@@ -60,7 +60,7 @@ fun positionsOf(vm: AppViewModel, rates: Rates, today: LocalDate): Map<Grp, List
 /** Kurznamen der Kategorien (damit alles in eine Zeile passt) */
 private fun Grp.short() = when (this) { Grp.FX -> "Devisen"; Grp.GOLD -> "Gold"; Grp.BONDS -> "Bonds"; Grp.MISC -> "Sonstiges" }
 
-private val COL = 72.dp   // Breite der USD-/EUR-Spalten
+private val COL = 84.dp   // Breite der USD-/EUR-Spalten (auch Summenzeile mit Symbol)
 
 @Composable
 fun OverviewScreen(vm: AppViewModel) {
@@ -239,10 +239,6 @@ private fun PositionGroup(g: Grp, rows: List<PosRow>, sumUsd: Double, rates: Rat
                 Text(g.title, color = g.color, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 14.sp)
                 Muted("${rows.size} Position${if (rows.size == 1) "" else "en"}", size = 9)
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(money(sumUsd, "USD", rates), fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 15.sp)
-                Text(money(sumUsd, "EUR", rates), color = C.Mute, fontSize = 12.sp, lineHeight = 14.sp)
-            }
             Text(if (open) "▾" else "▸", color = g.color, fontSize = 12.sp)
         }
         if (open) {
@@ -269,6 +265,14 @@ private fun PositionGroup(g: Grp, rows: List<PosRow>, sumUsd: Double, rates: Rat
                         Text(fmt(r.usd), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 11.5.sp)
                         Text(fmt(rates.toEur(r.usd)), Modifier.width(COL), textAlign = TextAlign.End, fontSize = 11.5.sp)
                     }
+                }
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp).clip(RoundedCornerShape(6.dp)).background(g.color).padding(vertical = 5.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Summe", Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(money(sumUsd, "USD", rates), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                    Text(money(sumUsd, "EUR", rates), Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
                 }
             }
         }
