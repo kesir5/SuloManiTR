@@ -56,6 +56,9 @@ private enum class BondSort(val label: String) {
 }
 
 private val PERIODS = listOf("1M" to 30, "3M" to 90, "1J" to 365)
+private val CDS_PERIODS = listOf("3T" to 3, "1W" to 7, "1M" to 30, "3M" to 91, "1J" to 365, "3J" to 1095)
+private val DATE_W = 76.dp
+private val OV_W = 78.dp
 private val COL = 78.dp   // Breite der USD-/EUR-Spalten
 
 @Composable
@@ -93,6 +96,45 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
     }
 
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 10.dp).padding(bottom = 88.dp)) {
+        // ---------- Überblick: ISIN · Nominal · Marktwert ----------
+        SectionTitle("Meine Bonds im Überblick")
+        SCard(padding = 8.dp, borderColor = Grp.BONDS.color) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(Grp.BONDS.light).padding(horizontal = 4.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("ISIN", Modifier.weight(1f), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                Text("NOMINAL", Modifier.width(OV_W), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, maxLines = 1)
+                Text("MARKTWERT $", Modifier.width(OV_W), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, maxLines = 1)
+                Text("MARKTWERT €", Modifier.width(OV_W), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, maxLines = 1)
+            }
+            if (views.isEmpty()) {
+                Text("Noch keine Eurobonds im Bestand.\nTippe auf „Eurobond hinzufügen“.", color = C.Mute, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp))
+            }
+            views.forEachIndexed { i, v ->
+                val key = "t:${v.holding.id}"
+                Column(Modifier.fillMaxWidth().background(if (i % 2 == 1) Color(0xFFEFF6F2) else Color.White)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { IsinLink(v.info.isin, { detail = if (detail == key) null else key }, 12) }
+                        Text("${fmt(v.holding.nominal)} ${sym(v.info.currency)}", Modifier.width(OV_W), textAlign = TextAlign.End, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                        Text(fmt(v.mvUsd), Modifier.width(OV_W), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (v.info.currency == "USD") FontWeight.Bold else FontWeight.Normal, maxLines = 1, softWrap = false)
+                        Text(fmt(rates.toEur(v.mvUsd)), Modifier.width(OV_W), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = if (v.info.currency == "EUR") FontWeight.Bold else FontWeight.Normal, maxLines = 1, softWrap = false)
+                    }
+                    if (detail == key) BondDetail(v, rates, period) { period = it }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)).background(Grp.BONDS.color).padding(horizontal = 4.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Summe", Modifier.weight(1f), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.width(OV_W))
+                Text("${fmt(views.sumOf { it.mvUsd })} $", Modifier.width(OV_W), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+                Text("${fmt(views.sumOf { rates.toEur(it.mvUsd) })} €", Modifier.width(OV_W), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
+            }
+            Muted("Fett = Anleihewährung · Marktwert = Nominal × aktueller Kurs · ISIN antippen für Kurs & Chart", Modifier.padding(top = 4.dp), 9)
+        }
+
         CdsCard(vm)
 
         // ---------- Auszahlungsplan ----------
@@ -116,7 +158,7 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(Grp.BONDS.light).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SortHeader("Datum", schedKey == SchedKey.DATE, schedAsc, Modifier.width(66.dp)) { if (schedKey == SchedKey.DATE) schedAsc = !schedAsc else { schedKey = SchedKey.DATE; schedAsc = true }; detail = null }
+                SortHeader("Datum", schedKey == SchedKey.DATE, schedAsc, Modifier.width(DATE_W)) { if (schedKey == SchedKey.DATE) schedAsc = !schedAsc else { schedKey = SchedKey.DATE; schedAsc = true }; detail = null }
                 SortHeader("Eurobond", schedKey == SchedKey.NAME, schedAsc, Modifier.weight(1f)) { if (schedKey == SchedKey.NAME) schedAsc = !schedAsc else { schedKey = SchedKey.NAME; schedAsc = true }; detail = null }
                 SortHeader("$ USD", schedKey == SchedKey.USD, schedAsc, Modifier.width(COL), end = true) { if (schedKey == SchedKey.USD) schedAsc = !schedAsc else { schedKey = SchedKey.USD; schedAsc = false }; detail = null }
                 Text("€ EUR", Modifier.width(COL), color = Grp.BONDS.color, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
@@ -138,7 +180,7 @@ fun BondsScreen(vm: AppViewModel, onEdit: (Long) -> Unit) {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)).background(Grp.BONDS.color).padding(horizontal = 4.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Summe", Modifier.width(66.dp), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Summe", Modifier.width(DATE_W), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text("${rows.size} Zahlungen", Modifier.weight(1f), color = Color.White, fontSize = 11.sp)
                 Text("${fmt(rows.sumOf { it.usd })} $", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
                 Text("${fmt(rows.sumOf { it.eur })} €", Modifier.width(COL), color = Color.White, textAlign = TextAlign.End, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false)
@@ -181,11 +223,10 @@ private fun SortHeader(text: String, active: Boolean, asc: Boolean, modifier: Mo
 
 @Composable
 private fun PayRowItem(r: PayRow, onIsin: () -> Unit) {
-    val chipBg = when { r.days <= 14 -> C.Soon; r.days <= 60 -> C.Mid; else -> C.Ok }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.width(66.dp)) {
+        Column(Modifier.width(DATE_W)) {
             Text(r.date.deShort(), fontSize = 12.sp, lineHeight = 14.sp)
-            Text("in ${r.days} T.", fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(top = 1.dp).clip(RoundedCornerShape(6.dp)).background(chipBg).padding(horizontal = 5.dp, vertical = 1.dp))
+            DueBadge(r.days, Modifier.padding(top = 2.dp))
         }
         Column(Modifier.weight(1f).padding(end = 4.dp)) {
             Text(r.name, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -200,9 +241,24 @@ private fun PayRowItem(r: PayRow, onIsin: () -> Unit) {
     }
 }
 
+/** Fälligkeits-Badge: rot ≤ 14 Tage, orange ≤ 60 Tage, sonst grün. */
 @Composable
-private fun IsinLink(isin: String, onClick: () -> Unit) {
-    Text(isin, color = C.Pri, fontSize = 10.sp, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onClick))
+private fun DueBadge(days: Long, modifier: Modifier = Modifier) {
+    val (bg, fg) = when {
+        days <= 14 -> Color(0xFFD32F2F) to Color.White
+        days <= 60 -> Color(0xFFF9A825) to Color(0xFF3B2A00)
+        else -> Color(0xFF2E7D32) to Color.White
+    }
+    val text = when (days) { 0L -> "heute"; 1L -> "morgen"; else -> "$days Tage" }
+    Text(
+        text, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Bold, color = fg, maxLines = 1, softWrap = false,
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(bg).padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+private fun IsinLink(isin: String, onClick: () -> Unit, size: Int = 10) {
+    Text(isin, color = C.Pri, fontSize = size.sp, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onClick))
 }
 
 @Composable
@@ -254,8 +310,15 @@ private fun BondCard(v: BondView, rates: Rates, today: LocalDate, onEdit: () -> 
                 Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFEEF6FF)).padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Nächste Zahlung ${next.de()} · $d T.", fontSize = 12.sp)
-                Text("+ ${fmt(v.perPayUsd)} $ / ${fmt(rates.toEur(v.perPayUsd))} €", color = C.Pos, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Column {
+                    Muted("Nächste Zahlung", size = 11)
+                    Text(next.de(), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    DueBadge(d, Modifier.padding(top = 3.dp))
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("+ ${fmt(v.perPayUsd)} $", color = C.Pos, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp)
+                    Text("+ ${fmt(rates.toEur(v.perPayUsd))} €", color = C.Pos, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp)
+                }
             }
         }
     }
@@ -330,6 +393,7 @@ private fun BondDetail(v: BondView, rates: Rates, period: String, onPeriod: (Str
 @Composable
 private fun CdsCard(vm: AppViewModel) {
     val cds = vm.market.cds
+    var period by rememberSaveable { mutableStateOf("3M") }
     SectionTitle("Länderrisiko")
     SCard(borderColor = Color(0xFFE6C3BF)) {
         Muted("Türkei CDS 5 Jahre (USD)")
@@ -338,24 +402,51 @@ private fun CdsCard(vm: AppViewModel) {
             Muted("Wird beim Aktualisieren von worldgovernmentbonds.com geladen. Falls die Seite nicht erreichbar ist, bleibt das Feld leer.", Modifier.padding(top = 4.dp), 10)
             return@SCard
         }
-        val chg = cds.change
-        val chgPct = cds.changePct
+        val all = cds.history
+        val days = CDS_PERIODS.first { it.first == period }.second
+        val hist = if (all.isEmpty()) all else all.filter { it.epochDay >= all.last().epochDay - days }.let { if (it.size >= 2) it else all.takeLast(2) }
+        val dayChg = cds.change
+        val dayPct = cds.changePct
+        val perChg = if (hist.size >= 2) hist.last().value - hist.first().value else null
+        val perPct = if (hist.size >= 2 && hist.first().value != 0.0) perChg!! / hist.first().value * 100 else null
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(fmt(cds.value, 2), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                if (chg != null && chgPct != null) {
+                if (dayChg != null && dayPct != null) {
                     // höherer CDS = höheres Risiko → rot
-                    Text("  ${fmtSigned(chg)} (${fmtSigned(chgPct)} %)", color = if (chg > 0) C.Neg else C.Pos, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("  ${fmtSigned(dayChg)} (${fmtSigned(dayPct)} %)", color = if (dayChg > 0) C.Neg else C.Pos, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                val last = cds.history.lastOrNull()
+                val last = all.lastOrNull()
                 Muted("Stand ${if (last != null) LocalDate.ofEpochDay(last.epochDay).de() else "–"}", size = 10)
             }
         }
-        Spacer(Modifier.height(6.dp))
-        ChartBlock(cds.history, 2, higherIsBad = true, height = 80.dp)
-        if (cds.history.size < 2) Muted("Der Verlauf wird mit jeder Aktualisierung länger – die Quelle lieferte keine Verlaufsdaten (Details auf der Übersicht).", Modifier.padding(top = 4.dp), 10)
+        Spacer(Modifier.height(8.dp))
+        // Zeitraum-Schalter
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E6E4)).padding(2.dp)) {
+            CDS_PERIODS.forEach { (p, _) ->
+                val on = p == period
+                Text(
+                    p, textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    color = if (on) Color.White else C.Ink, maxLines = 1,
+                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(if (on) Color(0xFFB3463C) else Color.Transparent)
+                        .clickable { period = p }.padding(vertical = 6.dp),
+                )
+            }
+        }
+        if (perChg != null && perPct != null) {
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Muted("Veränderung $period", size = 11)
+                Text(
+                    "${fmtSigned(perChg)} (${fmtSigned(perPct)} %)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    color = if (perChg > 0) C.Neg else C.Pos,
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        ChartBlock(hist, 2, higherIsBad = true, height = 90.dp)
+        if (all.size < 2) Muted("Der Verlauf wird mit jeder Aktualisierung länger – die Quelle lieferte keine Verlaufsdaten (Details auf der Übersicht).", Modifier.padding(top = 4.dp), 10)
         Muted("Höher = höheres Ausfallrisiko (Rot bei Anstieg) · Quelle: ${cds.source}", Modifier.padding(top = 6.dp), 10)
     }
 }

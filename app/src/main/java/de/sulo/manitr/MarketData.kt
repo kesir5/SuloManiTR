@@ -202,12 +202,12 @@ object MarketData {
         return pts.sortedBy { it.epochDay }.distinctBy { it.epochDay }
     }
 
-    /** Alte und neue Punkte zusammenführen (neu gewinnt), höchstens ~13 Monate behalten. */
+    /** Alte und neue Punkte zusammenführen (neu gewinnt), höchstens ~4,5 Jahre behalten. */
     internal fun mergeHistory(old: List<PricePoint>, fresh: List<PricePoint>): List<PricePoint> {
         val map = sortedMapOf<Long, Double>()
         old.forEach { map[it.epochDay] = it.value }
         fresh.forEach { map[it.epochDay] = it.value }
-        return map.entries.map { PricePoint(it.key, it.value) }.takeLast(400)
+        return map.entries.map { PricePoint(it.key, it.value) }.takeLast(1200)
     }
 
     private data class CdsResult(val quote: CdsQuote, val historyNote: String?)
@@ -268,7 +268,7 @@ object MarketData {
         try {
             val pts = parseWgbCds(post(WGB_URL, WGB_BODY))
             if (pts.size >= 2) {
-                val hist = pts.takeLast(400)
+                val hist = pts.takeLast(1200)
                 return@withContext CdsResult(CdsQuote(hist.last().value, hist, now, "worldgovernmentbonds.com"), null)
             }
             wgbError = "zu wenige Datenpunkte"
