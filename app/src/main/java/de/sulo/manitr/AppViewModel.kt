@@ -105,6 +105,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         events.tryEmit(Event("${item.name} entfernt") { update { p -> p.copy(misc = p.misc + item) } })
     }
 
+    // ---------- SK ----------
+    fun saveSk(id: Long?, name: String, currency: String, value: Double, unit: String) = update { p ->
+        if (id == null) p.copy(sk = p.sk + SkHolding(p.nextId, name, currency, value, unit), nextId = p.nextId + 1)
+        else p.copy(sk = p.sk.map { if (it.id == id) it.copy(name = name, currency = currency, value = value, unit = unit) else it })
+    }
+
+    fun removeSk(id: Long) {
+        val item = portfolio.sk.firstOrNull { it.id == id } ?: return
+        update { p -> p.copy(sk = p.sk.filterNot { it.id == id }) }
+        events.tryEmit(Event("${item.name.ifBlank { "Position" }} entfernt") { update { p -> p.copy(sk = p.sk + item) } })
+    }
+
     // ---------- Mieten ----------
     fun saveRent(id: Long?, property: String, rentTry: Double) = update { p ->
         if (id == null) p.copy(rents = p.rents + RentHolding(p.nextId, property, rentTry), nextId = p.nextId + 1)

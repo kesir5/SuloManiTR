@@ -66,6 +66,7 @@ private enum class Tab(val label: String, val icon: ImageVector, val title: Stri
     GOLD("Gold", NavIcons.GoldBars, "Gold", "Gold hinzufügen"),
     BONDS("Bonds", NavIcons.Bonds, "Eurobonds Türkei", "Eurobond hinzufügen"),
     MISC("Misc.", NavIcons.Misc, "Sonstige Vermögenswerte", "Vermögenswert hinzufügen"),
+    SK("SK", NavIcons.Table, "SK", null),
 }
 
 /** Untere Leiste mit doppelt so großen Icons (36 dp) */
@@ -76,7 +77,7 @@ private fun BottomBar(selected: Tab, onSelect: (Tab) -> Unit) {
             val sel = t == selected
             Column(Modifier.weight(1f).clickable { onSelect(t) }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    Modifier.size(width = 68.dp, height = 44.dp).clip(RoundedCornerShape(22.dp)).background(if (sel) C.PriC else Color.Transparent),
+                    Modifier.size(width = 56.dp, height = 44.dp).clip(RoundedCornerShape(22.dp)).background(if (sel) C.PriC else Color.Transparent),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(t.icon, contentDescription = t.label, modifier = Modifier.size(36.dp), tint = if (sel) C.Navy else C.Mute)
@@ -172,6 +173,7 @@ fun AppRoot(vm: AppViewModel, onLock: () -> Unit) {
                     Tab.GOLD -> GoldScreen(vm) { openDialog(Tab.GOLD, it) }
                     Tab.BONDS -> BondsScreen(vm) { openDialog(Tab.BONDS, it) }
                     Tab.MISC -> MiscScreen(vm, { openDialog(Tab.MISC, it) }, { dialogTab = "RENT"; dialogId = it })
+                    Tab.SK -> SkScreen(vm)
                 }
             }
         }

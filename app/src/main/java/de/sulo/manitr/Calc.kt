@@ -165,6 +165,13 @@ object Calc {
         return Totals(fx, gold, bonds, misc)
     }
 
+    /** USD-Wert einer SK-Position; null = ohne Umrechnung (Einheit „frei“). */
+    fun skUsd(h: SkHolding, rates: Rates): Double? = when (h.unit) {
+        "GRAMM" -> h.value * rates.goldUsdPerGram()
+        "FREI" -> null
+        else -> rates.toUsd(h.currency, h.value)
+    }
+
     fun goldUsd(h: GoldHolding, rates: Rates): Double =
         h.amount * Presets.goldType(h.type).fineGrams * rates.goldUsdPerGram()
 }

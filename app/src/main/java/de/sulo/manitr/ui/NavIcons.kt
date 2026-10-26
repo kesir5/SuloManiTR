@@ -25,5 +25,6 @@ object NavIcons {
     }
     val GoldBars by lazy { vec("gold", "M9 5.5h6l1.2 5.5H7.8z M4.5 12.5h6l1.2 5.5H3.3z M13.5 12.5h6l1.2 5.5H12.3z") }
     val Bonds by lazy { vec("bonds", "M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z") }
+    val Table by lazy { vec("table", "M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM8 20H4v-4h4v4zm0-6H4v-4h4v4zm0-6H4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4zm6 12h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V4h4v4z") }
     val Misc by lazy { vec("misc", "M12 2l-5.5 9h11L12 2zm5.5 11c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zM3 21.5h8v-8H3v8z") }
 }

@@ -29,6 +29,7 @@ object Json {
             JSONObject().put("id", it.id).put("name", it.name).put("category", it.category)
                 .put("currency", it.currency).put("amount", it.amount)
         }))
+        put("sk", JSONArray(p.sk.map { JSONObject().put("id", it.id).put("name", it.name).put("currency", it.currency).put("value", it.value).put("unit", it.unit) }))
         put("rents", JSONArray(p.rents.map { JSONObject().put("id", it.id).put("property", it.property).put("rent", it.rentTry) }))
     }
 
@@ -49,6 +50,7 @@ object Json {
                 MiscHolding(it.getLong("id"), it.getString("name"), it.getString("category"), it.getString("currency"), it.getDouble("amount"))
             },
             rents = o.optJSONArray("rents").mapObjects { RentHolding(it.getLong("id"), it.getString("property"), it.getDouble("rent")) },
+            sk = o.optJSONArray("sk").mapObjects { SkHolding(it.getLong("id"), it.optString("name", ""), it.getString("currency"), it.getDouble("value"), it.optString("unit", "BETRAG")) },
             nextId = o.optLong("nextId", 1),
         )
     }

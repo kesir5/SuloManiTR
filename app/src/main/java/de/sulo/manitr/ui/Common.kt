@@ -70,6 +70,8 @@ object C {
     val Pos = Color(0xFF14804A)
     val Neg = Color(0xFFBA1A1A)
     val Orange = Color(0xFFC25E00)
+    val Teal = Color(0xFF0F766E)
+    val TealL = Color(0xFFE0F2EF)
     val Soon = Color(0xFFF4C7C3)
     val Mid = Color(0xFFFDEBC8)
     val Ok = Color(0xFFE3F1E5)
@@ -129,6 +131,10 @@ fun SectionTitle(text: String) {
         modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
     )
 }
+
+/** Schriftgröße (sp) je Textlänge, damit lange Zahlen in schmale Spalten passen. */
+fun fitSp(text: String, base: Float = 12f, min: Float = 8f): Float =
+    (base - maxOf(0, text.length - 7)).coerceAtLeast(min)
 
 fun sym(ccy: String) = when (ccy) { "USD" -> "$"; "EUR" -> "€"; else -> ccy }
 

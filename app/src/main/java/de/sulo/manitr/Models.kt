@@ -33,6 +33,9 @@ data class MiscHolding(
 /** Vermietete Immobilie: Miete pro Monat in türkischen Lira */
 data class RentHolding(val id: Long, val property: String, val rentTry: Double)
 
+/** SK-Position: Wert in Währung (BETRAG), in Gramm Feingold (GRAMM) oder ohne Umrechnung (FREI) */
+data class SkHolding(val id: Long, val name: String, val currency: String, val value: Double, val unit: String = "BETRAG")
+
 data class Portfolio(
     val fx: List<FxHolding> = emptyList(),
     val gold: List<GoldHolding> = emptyList(),
@@ -40,6 +43,7 @@ data class Portfolio(
     val bonds: List<BondHolding> = emptyList(),
     val misc: List<MiscHolding> = emptyList(),
     val rents: List<RentHolding> = emptyList(),
+    val sk: List<SkHolding> = emptyList(),
     val nextId: Long = 1,
 ) {
     fun info(isin: String): BondInfo? = bondInfos.firstOrNull { it.isin == isin }
