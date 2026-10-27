@@ -14,8 +14,8 @@ import javax.crypto.spec.GCMParameterSpec
  * Lokaler, verschlüsselter Speicher. Der AES-256-Schlüssel liegt im Android Keystore
  * (hardwaregestützt, wenn verfügbar) und verlässt das Gerät nie.
  */
-class Vault(private val context: Context) {
-    private val file get() = File(context.filesDir, "vault.bin")
+class Vault(private val context: Context, private val name: String = "vault.bin") {
+    private val file get() = File(context.filesDir, name)
 
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -36,7 +36,7 @@ class Vault(private val context: Context) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val data = cipher.iv + cipher.doFinal(json.toByteArray(Charsets.UTF_8))
-        val tmp = File(context.filesDir, "vault.tmp")
+        val tmp = File(context.filesDir, "$name.tmp")
         tmp.writeBytes(data)
         if (!tmp.renameTo(file)) {
             file.delete()
@@ -54,7 +54,7 @@ class Vault(private val context: Context) {
             String(cipher.doFinal(data, 12, data.size - 12), Charsets.UTF_8)
         } catch (e: Exception) {
             // Schlüssel verloren o. ä.: alte Datei sichern, neu beginnen
-            file.renameTo(File(context.filesDir, "vault.corrupt"))
+            file.renameTo(File(context.filesDir, "$name.corrupt"))
             null
         }
     }

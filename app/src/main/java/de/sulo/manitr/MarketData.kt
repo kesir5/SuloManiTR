@@ -50,6 +50,16 @@ object MarketData {
         RefreshResult(market, errors)
     }
 
+    /** Nur Wechselkurse und Goldpreis (für den Hintergrund-Auftrag des SK-Verlaufs). */
+    suspend fun refreshRates(old: Market): Market = coroutineScope {
+        val fxD = async(Dispatchers.IO) { runCatching { fetchFx() } }
+        val goldD = async(Dispatchers.IO) { runCatching { fetchGold() } }
+        var m = old
+        fxD.await().onSuccess { m = m.copy(usdPer = it) }
+        goldD.await().onSuccess { m = m.copy(goldUsdPerOz = it) }
+        m
+    }
+
     private fun Throwable.msg() = message ?: javaClass.simpleName
 
     // ---------- HTTP ----------

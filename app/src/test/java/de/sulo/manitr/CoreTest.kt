@@ -95,6 +95,43 @@ class CoreTest {
     }
 
     @Test
+    fun skHistory_dueRules() {
+        // Dienstag 27.10.2026: letzter Samstag 24.10. (3 Tage), Monatsende 30.09. zu lange her
+        val tue = LocalDate.of(2026, 10, 27)
+        assertEquals(listOf(LocalDate.of(2026, 10, 24) to "SA"), SkHistory.due(tue, emptyList()))
+        // Samstag, der zugleich Monatsende ist: ein Eintrag
+        val sat = LocalDate.of(2026, 10, 31)
+        assertEquals(listOf(sat to "SA+ME"), SkHistory.due(sat, emptyList()))
+        // Montag 02.11.: Samstag = Monatsende = 31.10. (nachgetragen)
+        val mon = LocalDate.of(2026, 11, 2)
+        val s = SkHistory.snapshots(mon, emptyList(), 100.0, 90.0)
+        assertEquals(1, s.size); assertEquals("SA+ME", s[0].kind); assertTrue(s[0].late)
+        // Monatsende unter der Woche (Mittwoch 30.09.) plus Samstag 26.09.
+        val wed = LocalDate.of(2026, 9, 30)
+        assertEquals(listOf(LocalDate.of(2026, 9, 26) to "SA", wed to "ME"), SkHistory.due(wed, emptyList()))
+        // bereits vorhanden: nichts Neues
+        val have = listOf(SkSnapshot(LocalDate.of(2026, 10, 24).toEpochDay(), 1.0, 1.0, "SA", false))
+        assertTrue(SkHistory.due(tue, have).isEmpty())
+        // Samstag selbst ist nicht „nachgetragen“
+        assertTrue(!SkHistory.snapshots(LocalDate.of(2026, 10, 24), emptyList(), 1.0, 1.0)[0].late)
+        // JSON-Roundtrip
+        assertEquals(have, SkHistory.fromJson(SkHistory.toJson(have)))
+    }
+
+    @Test
+    fun skExport_producesValidXlsxZip() {
+        val rows = listOf(SkSnapshot(20_750, 34_693.4, 30_870.1, "SA", true), SkSnapshot(20_725, 33_120.0, 29_474.0, "ME", false))
+        val bytes = SkExport.xlsx(rows)
+        java.io.File(System.getProperty("java.io.tmpdir"), "sk_test.xlsx").writeBytes(bytes)
+        val names = mutableListOf<String>()
+        java.util.zip.ZipInputStream(bytes.inputStream()).use { z ->
+            var e = z.nextEntry
+            while (e != null) { names += e.name; val xml = String(z.readBytes()); javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(xml.byteInputStream()); e = z.nextEntry }
+        }
+        assertTrue(names.containsAll(listOf("[Content_Types].xml", "_rels/.rels", "xl/workbook.xml", "xl/worksheets/sheet1.xml", "xl/styles.xml")))
+    }
+
+    @Test
     fun backupCrypto_roundTrip_and_wrongPassword() {
         val plain = "geheim äöü € 123".toByteArray()
         val enc = BackupCrypto.encrypt(plain, "pw1234".toCharArray())

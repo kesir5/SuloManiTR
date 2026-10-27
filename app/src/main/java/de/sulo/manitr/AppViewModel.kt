@@ -27,6 +27,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var refreshing by mutableStateOf(false); private set
     var errors by mutableStateOf<List<String>>(emptyList()); private set
 
+    private val skStore = SkHistoryStore(app)
+    var skHistory by mutableStateOf<List<SkSnapshot>>(emptyList()); private set
+
     val events = MutableSharedFlow<Event>(extraBufferCapacity = 8)
 
     val rates: Rates get() = Rates.from(market)
@@ -35,6 +38,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vault.load()
             ?.let { runCatching { Json.storeFromJson(it) }.getOrNull() }
             ?.let { portfolio = it.portfolio; market = it.market; displayCcy = it.displayCcy }
+        skHistory = runCatching { skStore.load() }.getOrDefault(emptyList())
     }
 
     private fun persist() {
@@ -105,6 +109,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         events.tryEmit(Event("${item.name} entfernt") { update { p -> p.copy(misc = p.misc + item) } })
     }
 
+    // ---------- SK-Verlauf ----------
+    /** Trägt fällige Samstags-/Monatsende-Einträge ein und lädt die Liste neu (auch Einträge des Hintergrund-Auftrags). */
+    fun recordSkSnapshots() {
+        val items = portfolio.sk
+        val r = rates
+        val usd = items.sumOf { Calc.skUsd(it, r) ?: 0.0 }
+        viewModelScope.launch(writer) {
+            val list = runCatching {
+                if (items.isEmpty()) skStore.load()
+                else skStore.recordDue(java.time.LocalDate.now(), usd, r.toEur(usd))
+            }.getOrNull() ?: return@launch
+            withContext(Dispatchers.Main) { skHistory = list }
+        }
+    }
+
+    fun clearSkHistory() {
+        val old = skHistory
+        if (old.isEmpty()) return
+        skHistory = emptyList()
+        viewModelScope.launch(writer) { runCatching { skStore.save(emptyList()) } }
+        events.tryEmit(Event("${old.size} Verlaufseinträge gelöscht") {
+            skHistory = old
+            viewModelScope.launch(writer) { runCatching { skStore.save(old) } }
+        })
+    }
+
+    fun exportSkXlsx(uri: Uri) {
+        val rows = skHistory
+        viewModelScope.launch(Dispatchers.IO) {
+            val msg = runCatching {
+                getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.use { it.write(SkExport.xlsx(rows)) }
+                "Excel-Datei gespeichert (${rows.size} Einträge)"
+            }.getOrElse { "Export fehlgeschlagen: ${it.message}" }
+            events.tryEmit(Event(msg))
+        }
+    }
+
     // ---------- SK ----------
     fun saveSk(id: Long?, name: String, currency: String, value: Double, unit: String) = update { p ->
         if (id == null) p.copy(sk = p.sk + SkHolding(p.nextId, name, currency, value, unit), nextId = p.nextId + 1)
@@ -139,6 +180,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 market = res.market
                 errors = res.errors
                 persist()
+                recordSkSnapshots()
                 events.tryEmit(
                     Event(
                         if (res.errors.isEmpty()) "Kurse aktualisiert"

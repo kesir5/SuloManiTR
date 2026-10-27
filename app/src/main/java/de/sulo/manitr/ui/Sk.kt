@@ -1,6 +1,14 @@
 package de.sulo.manitr.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import de.sulo.manitr.SkExport
+import de.sulo.manitr.de
+import java.time.LocalDate
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -125,6 +133,7 @@ fun SkScreen(vm: AppViewModel) {
             }
             Muted("Betrag = Wert × Live-Kurs der Währung · Gramm = Feingold × Goldpreis · frei = ohne Umrechnung (nicht in der Summe) · Felder direkt antippen und tippen", Modifier.padding(top = 4.dp), 9)
         }
+        SkHistorySection(vm)
     }
 }
 
@@ -205,5 +214,105 @@ private fun PickCell(label: String, width: androidx.compose.ui.unit.Dp, enabled:
                 .then(if (enabled) Modifier.clickable { open = true } else Modifier).padding(horizontal = 3.dp, vertical = 2.dp),
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) { menu { open = false } }
+    }
+}
+
+/** Einklappbarer Verlauf: Gesamtwert jeden Samstag und zum Monatsende, mit Excel-Export und Löschen. */
+@Composable
+private fun SkHistorySection(vm: AppViewModel) {
+    val list = vm.skHistory.sortedByDescending { it.epochDay }
+    var open by rememberSaveable { mutableStateOf(true) }
+    var confirm by remember { mutableStateOf(false) }
+    val export = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    ) { uri -> if (uri != null) vm.exportSkXlsx(uri) }
+    val hdr = TextStyle(fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = C.Teal)
+    val colW = 78.dp
+
+    Spacer(Modifier.height(14.dp))
+    SCard(padding = 0.dp, borderColor = C.Teal) {
+        Row(
+            Modifier.fillMaxWidth().background(C.TealL).clickable { open = !open }.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+                Text("Verlauf Gesamtwert", color = C.Teal, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                val sub = if (list.isEmpty()) "Jeden Samstag und zum Monatsende"
+                else if (open) "Jeden Samstag und zum Monatsende · ${list.size} Einträge"
+                else "Letzter Eintrag ${LocalDate.ofEpochDay(list.first().epochDay).de()} · ${fmt(list.first().usd)} $ · ${fmt(list.first().eur)} €"
+                Text(sub, color = Color(0xFF4B7F79), fontSize = 10.5.sp, maxLines = 1)
+            }
+            Text(if (open) "▾" else "▸", color = C.Teal, fontSize = 18.sp)
+        }
+        if (open) {
+            androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 8.dp).padding(top = 6.dp, bottom = 10.dp)) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)).background(Color(0xFFF1F7F6)).padding(horizontal = 4.dp, vertical = 5.dp)) {
+                    Text("DATUM", Modifier.width(76.dp), style = hdr)
+                    Text("ART", Modifier.weight(1f), style = hdr)
+                    Text("$ USD", Modifier.width(colW), style = hdr, textAlign = TextAlign.End, maxLines = 1)
+                    Text("€ EUR", Modifier.width(colW), style = hdr, textAlign = TextAlign.End, maxLines = 1)
+                }
+                if (list.isEmpty()) {
+                    Text(
+                        "Noch keine Einträge.\nDer erste Eintrag wird am nächsten Samstag oder Monatsende automatisch gespeichert.",
+                        color = C.Mute, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    )
+                }
+                list.forEachIndexed { i, r ->
+                    val usdT = "${fmt(r.usd)} $"
+                    val eurT = "${fmt(r.eur)} €"
+                    val (label, chipBg, chipFg) = when (r.kind) {
+                        "ME" -> Triple("Monatsende", Color(0xFFFDEBC8), Color(0xFF7A4B00))
+                        "SA+ME" -> Triple("Sa + Ende", C.TealL, C.Teal)
+                        else -> Triple("Samstag", C.TealL, C.Teal)
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().background(if (i % 2 == 1) C.TealL.copy(alpha = .45f) else Color.Transparent).padding(horizontal = 4.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(LocalDate.ofEpochDay(r.epochDay).de(), Modifier.width(76.dp), fontSize = 12.sp, maxLines = 1)
+                        Box(Modifier.weight(1f)) {
+                            Text(
+                                label + if (r.late) "*" else "", color = chipFg, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false,
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(chipBg).padding(horizontal = 6.dp, vertical = 1.dp),
+                            )
+                        }
+                        Text(usdT, Modifier.width(colW), fontSize = fitSp(usdT, 12f).sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
+                        Text(eurT, Modifier.width(colW), fontSize = fitSp(eurT, 12f).sp, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
+                    }
+                }
+                Muted(
+                    "Neueste oben · Wert = Gesamtsumme der SK-Tabelle am Stichtag" + if (list.any { it.late }) " · * nachgetragen (App war am Stichtag nicht aktiv)" else "",
+                    Modifier.padding(top = 4.dp, bottom = 8.dp), 9,
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Excel exportieren", Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(C.Teal)
+                            .clickable {
+                                if (list.isEmpty()) vm.events.tryEmit(AppViewModel.Event("Noch keine Einträge zum Exportieren"))
+                                else export.launch("sk-verlauf.xlsx")
+                            }.padding(vertical = 10.dp),
+                        color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        "Einträge löschen", Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).border(1.dp, C.Neg, RoundedCornerShape(10.dp))
+                            .clickable {
+                                if (list.isEmpty()) vm.events.tryEmit(AppViewModel.Event("Keine Einträge vorhanden"))
+                                else confirm = true
+                            }.padding(vertical = 10.dp),
+                        color = C.Neg, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+    }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("Alle Verlaufseinträge löschen?") },
+            text = { Text("Die ${list.size} gespeicherten Einträge werden entfernt. Die Positionen oben bleiben unverändert.") },
+            confirmButton = { TextButton(onClick = { confirm = false; vm.clearSkHistory() }) { Text("Löschen", color = C.Neg) } },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text("Abbrechen") } },
+        )
     }
 }

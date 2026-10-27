@@ -41,6 +41,7 @@ class MainActivity : FragmentActivity() {
         // Kein Screenshot / keine Vorschau im App-Wechsler
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         enableEdgeToEdge()
+        runCatching { SkSnapshotWorker.schedule(applicationContext) }
         setContent {
             SuloTheme {
                 if (unlocked) {
